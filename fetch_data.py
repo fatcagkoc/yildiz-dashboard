@@ -35,8 +35,8 @@ def _split(raw):
 def _sid(prefix):
     return prefix + "".join(random.choices(string.ascii_lowercase, k=12))
 
-def fetch_history(symbol, bars=400, timeout=30):
-    """Return list of (unix_ts, close) daily bars, oldest first."""
+def fetch_history(symbol, bars=400, timeout=30, resolution="1D"):
+    """Return list of (unix_ts, close) bars (daily by default), oldest first."""
     kw = {}
     proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy")
     if proxy:
@@ -52,7 +52,7 @@ def fetch_history(symbol, bars=400, timeout=30):
         ws.send(_frame("set_auth_token", ["unauthorized_user_token"]))
         ws.send(_frame("chart_create_session", [cs, ""]))
         ws.send(_frame("resolve_symbol", [cs, "sym_1", "=" + json.dumps({"symbol": symbol, "adjustment": "splits"})]))
-        ws.send(_frame("create_series", [cs, "s1", "s1", "sym_1", "1D", bars, ""]))
+        ws.send(_frame("create_series", [cs, "s1", "s1", "sym_1", resolution, bars, ""]))
         out = []
         while True:
             raw = ws.recv()
@@ -91,7 +91,7 @@ COMPANIES = [
     {"ticker": "BESLR", "name": "Besler Gıda", "bench": "XGIDA"},
     {"ticker": "SOKM", "name": "ŞOK Marketler", "bench": "XTCRT"},
     {"ticker": "BIZIM", "name": "Bizim Toptan", "bench": "XTCRT"},
-    {"ticker": "GOZDE", "name": "Gözde Girişim", "bench": "XHOLD"},
+    {"ticker": "GOZDE", "name": "Gözde Girişim", "bench": "XUMAL"},
     {"ticker": "PENTA", "name": "Penta Teknoloji", "bench": "XUTEK"},
     {"ticker": "MAKTK", "name": "Makina Takım", "bench": "XMESY"},
 ]
@@ -99,23 +99,14 @@ BENCHMARKS = {
     "XU100": "BIST 100",
     "XGIDA": "BIST Gıda İçecek",
     "XTCRT": "BIST Ticaret",
-    "XHOLD": "BIST Holding ve Yatırım",
+    "XUMAL": "BIST Mali",
     "XUTEK": "BIST Teknoloji",
     "XMESY": "BIST Metal Eşya Makina",
 }
-# Valuation peer groups (TradingView classification). GOZDE sits in "Finance",
-# which is dominated by banks, so it is compared with investment companies only.
-PEER_OVERRIDE = {
-    "GOZDE": {"industries": ["Investment Banks/Brokers", "Financial Conglomerates",
-                             "Investment Trusts/Mutual Funds", "Investment Managers"],
-              "label": "Yatırım şirketleri"},
-}
-SECTOR_TR = {
-    "Consumer Non-Durables": "Dayanıksız tüketim", "Retail Trade": "Perakende",
-    "Finance": "Finans", "Distribution Services": "Dağıtım hizmetleri",
-    "Producer Manufacturing": "Üretim / makine", "Electronic Technology": "Elektronik teknoloji",
-    "Technology Services": "Teknoloji hizmetleri",
-}
+# Valuation peers = constituents of the company's sector index.
+# GOZDE's index (BIST Mali) is dominated by banks, so banks are excluded for it.
+EXCLUDE_BANKS_FOR = {"GOZDE"}
+INTRADAY_BARS = 70  # hourly bars, ~1.5 trading weeks
 
 
 def log(*a):
@@ -176,7 +167,7 @@ def main():
 
     # ---- Fundamentals (TradingView scanner) ----
     cols = ["name", "close", "market_cap_basic", "price_earnings_ttm", "price_book_fq",
-            "total_shares_outstanding_fundamental", "sector", "industry"]
+            "total_shares_outstanding_fundamental", "sector", "industry", "logoid"]
     fund = {}
     try:
         rows = retry(tv_scan, {"symbols": {"tickers": [f"BIST:{c['ticker']}" for c in COMPANIES]}, "columns": cols})
@@ -188,20 +179,27 @@ def main():
         warnings.append(f"fundamentals: {e}")
         log("scanner FAILED", e)
 
-    # ---- Sector peer multiples ----
-    peer_cache = {}
+    # ---- Sector index constituents ----
+    def members(code):
+        data = retry(tv_scan, {
+            "symbols": {"symbolset": [f"SYML:BIST;{code}"]},
+            "columns": ["name", "description", "market_cap_basic", "price_earnings_ttm", "price_book_fq"],
+            "range": [0, 1000],
+            "sort": {"sortBy": "market_cap_basic", "sortOrder": "desc"}})
+        return [{"t": x["d"][0], "name": x["d"][1], "mcap": x["d"][2], "pe": x["d"][3], "pb": x["d"][4]}
+                for x in data]
 
-    def peers(sector):
-        if sector not in peer_cache:
-            data = retry(tv_scan, {
-                "filter": [{"left": "sector", "operation": "equal", "right": sector},
-                           {"left": "exchange", "operation": "equal", "right": "BIST"},
-                           {"left": "type", "operation": "equal", "right": "stock"}],
-                "columns": ["name", "market_cap_basic", "price_earnings_ttm", "price_book_fq", "industry"],
-                "range": [0, 1000]})
-            peer_cache[sector] = [{"name": x["d"][0], "mcap": x["d"][1], "pe": x["d"][2], "pb": x["d"][3],
-                                   "industry": x["d"][4]} for x in data]
-        return peer_cache[sector]
+    member_data = {}
+    for code in list(BENCHMARKS) + ["XBANK"]:
+        if code == "XU100":
+            continue
+        try:
+            member_data[code] = members(code)
+            log("members", code, len(member_data[code]))
+        except Exception as e:  # noqa: BLE001
+            warnings.append(f"{code} members: {e}")
+            log("members FAILED", code, e)
+    bank_set = {m["t"] for m in member_data.get("XBANK", [])}
 
     # ---- FX ----
     fx = prev.get("fx", {})
@@ -209,6 +207,13 @@ def main():
         bars, meta = retry(yahoo_chart, "USDTRY=X")
         fx = {"last": round(meta["regularMarketPrice"], 4), "history": series(bars), "source": "Yahoo"}
         log("fx: yahoo ok", fx["last"], len(fx["history"]))
+        # Yahoo's live FX tick is occasionally noisy; prefer TradingView's latest hourly close.
+        try:
+            hb = retry(fetch_history, "FX_IDC:USDTRY", 5, resolution="60")
+            fx["last"] = round(hb[-1][1], 4)
+            log("fx: live rate from TradingView", fx["last"])
+        except Exception as e:  # noqa: BLE001
+            log("fx live TV failed, keeping Yahoo", e)
     except Exception as e:  # noqa: BLE001
         log("fx yahoo failed, trying TradingView", e)
         try:
@@ -224,6 +229,10 @@ def main():
             bars = retry(fetch_history, f"BIST:{code}", BARS)
             benchmarks[code] = {"name": name, "history": series(bars)}
             log("bench", code, len(bars), bars[-1][1])
+            if code in member_data:
+                benchmarks[code]["members"] = [[m["t"], m["name"], m["mcap"]] for m in member_data[code]]
+            elif code in prev_bm and "members" in prev_bm[code]:
+                benchmarks[code]["members"] = prev_bm[code]["members"]
         except Exception as e:  # noqa: BLE001
             warnings.append(f"{code}: {e}")
             log("bench FAILED", code, e)
@@ -260,30 +269,41 @@ def main():
                 "pb": f["price_book_fq"],
                 "tv_sector": f["sector"],
                 "tv_industry": f["industry"],
+                "logoid": f["logoid"],
             })
         else:
-            for k in ("shares", "mcap", "pe", "pb", "tv_sector", "tv_industry"):
+            for k in ("shares", "mcap", "pe", "pb", "tv_sector", "tv_industry", "logoid"):
                 item[k] = old.get(k)
 
         # keep market cap consistent with the latest price
         if item.get("shares") and item.get("history"):
             item["mcap"] = item["shares"] * item["history"][-1][1]
 
+        # hourly bars for the 1-week views
         try:
-            sector = item.get("tv_sector")
-            ov = PEER_OVERRIDE.get(t)
-            group = peers(sector) if sector else []
-            if ov:
-                group = [g for g in group if g["industry"] in ov["industries"]]
-                item["peer_label"] = ov["label"]
-            else:
-                item["peer_label"] = SECTOR_TR.get(sector, sector)
+            hb = retry(fetch_history, f"BIST:{t}", INTRADAY_BARS, resolution="60")
+            tz = dt.timezone(dt.timedelta(hours=3))
+            item["intraday"] = [[dt.datetime.fromtimestamp(ts, tz).strftime("%Y-%m-%dT%H:%M"), round(c, 4)]
+                                for ts, c in hb]
+        except Exception as e:  # noqa: BLE001
+            warnings.append(f"{t} intraday: {e}")
+            item["intraday"] = old.get("intraday", [])
+
+        # valuation vs sector index constituents
+        group = member_data.get(c["bench"])
+        if group is not None:
+            label = BENCHMARKS[c["bench"]]
+            if t in EXCLUDE_BANKS_FOR:
+                group = [g for g in group if g["t"] not in bank_set]
+                label += " (bankalar hariç)"
+            item["peer_label"] = label
             item["peer_count"] = len(group)
             item["sector_pe"] = weighted(group, "pe")
             item["sector_pb"] = weighted(group, "pb")
-        except Exception as e:  # noqa: BLE001
-            warnings.append(f"{t} peers: {e}")
-            for k in ("peer_label", "peer_count", "sector_pe", "sector_pb"):
+            ranked = [m["t"] for m in member_data[c["bench"]]]
+            item["index_rank"] = ranked.index(t) + 1 if t in ranked else None
+        else:
+            for k in ("peer_label", "peer_count", "sector_pe", "sector_pb", "index_rank"):
                 item[k] = old.get(k)
         companies.append(item)
         log("company", t, len(item["history"]), item.get("mcap"), item.get("pe"), item.get("sector_pe"))
