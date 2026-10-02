@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Yıldız Holding Hisse Paneli</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#f5f5f3;--surface:#fcfcfb;--line:#e4e3df;--grid:#ecebe7;
+  --text:#0b0b0b;--text2:#52514e;--muted:#7a7975;
+  --s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;
+  --up:#006300;--down:#c22f2f;--up-bg:#e3f3e3;--down-bg:#fbe6e6;
+  --accent:#2a78d6;--chip:#efeeea;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --bg:#121211;--surface:#1a1a19;--line:#2e2e2b;--grid:#262624;
+  --text:#ffffff;--text2:#c3c2b7;--muted:#8f8e86;
+  --s1:#3987e5;--s2:#d95926;--s3:#199e70;
+  --up:#3fbf3f;--down:#ef7070;--up-bg:#173117;--down-bg:#3a1c1c;
+  --accent:#3987e5;--chip:#262624;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#121211;--surface:#1a1a19;--line:#2e2e2b;--grid:#262624;
+  --text:#ffffff;--text2:#c3c2b7;--muted:#8f8e86;
+  --s1:#3987e5;--s2:#d95926;--s3:#199e70;
+  --up:#3fbf3f;--down:#ef7070;--up-bg:#173117;--down-bg:#3a1c1c;
+  --accent:#3987e5;--chip:#262624;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 16px 48px}
+header{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;margin-bottom:20px}
+h1{font-size:22px;line-height:1.2;margin:0 0 4px;font-weight:700;letter-spacing:-.01em}
+.sub{color:var(--text2);font-size:13px}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--chip);border-radius:8px;padding:3px}
+.seg button{border:0;background:transparent;color:var(--text2);font:inherit;font-weight:500;padding:5px 12px;border-radius:6px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:12px}
+.kpi .lab{color:var(--text2);font-size:12px;font-weight:500;margin-bottom:6px}
+.kpi .val{font-size:24px;font-weight:700;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.kpi .foot{margin-top:4px;font-size:12.5px;color:var(--text2);font-variant-numeric:tabular-nums}
+h2{font-size:15px;margin:0 0 2px;font-weight:600}
+.hint{color:var(--muted);font-size:12px;margin:0 0 14px}
+.grid2{display:grid;grid-template-columns:3fr 2fr;gap:12px;margin-top:12px}
+.tbl-wrap{overflow-x:auto;margin:0 -18px;padding:0 18px}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th{font-size:11.5px;font-weight:600;color:var(--text2);text-align:right;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+td{padding:10px;border-bottom:1px solid var(--grid);text-align:right;white-space:nowrap;vertical-align:top}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:var(--bg)}
+tbody tr.sel td{background:var(--bg)}
+tbody tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.co{font-weight:600}.tk{color:var(--muted);font-size:12px;font-weight:500}
+.bm{color:var(--muted);font-size:11.5px}
+.ret{font-weight:600}
+.rel{display:inline-flex;align-items:center;gap:3px;margin-top:3px;font-size:11.5px;font-weight:600;padding:1px 6px;border-radius:5px}
+.rel.up{color:var(--up);background:var(--up-bg)}.rel.down{color:var(--down);background:var(--down-bg)}
+.pos{color:var(--up)}.neg{color:var(--down)}
+.chart{position:relative;width:100%}
+.chart svg{display:block;width:100%;overflow:visible}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:0 0 10px;font-size:12.5px;color:var(--text2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:3px;border-radius:2px;display:inline-block}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.12);white-space:nowrap;opacity:0;transition:opacity .1s;z-index:2}
+.tip b{font-weight:600}.tip .r{display:flex;justify-content:space-between;gap:14px;color:var(--text2)}.tip .r em{font-style:normal;color:var(--text);font-weight:600}
+.head-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.bars .row{display:grid;grid-template-columns:110px 1fr 80px;gap:10px;align-items:center;padding:5px 0;font-size:13px}
+.bars .track{height:14px;background:transparent;position:relative}
+.bars .fill{height:100%;background:var(--s1);border-radius:0 4px 4px 0;min-width:2px}
+.bars .v{text-align:right;color:var(--text2);font-variant-numeric:tabular-nums}
+.val-cell{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.val-cell small{color:var(--muted);font-size:11.5px}
+.notes{margin-top:18px;color:var(--muted);font-size:12px;line-height:1.6}
+.notes p{margin:0 0 4px}
+.warn{display:none;margin-bottom:12px;padding:10px 12px;border-radius:8px;background:var(--down-bg);color:var(--down);font-size:13px}
+.err{padding:40px;text-align:center;color:var(--text2)}
+@media (max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2{grid-template-columns:1fr}}
+@media (max-width:480px){.kpi .val{font-size:20px}h1{font-size:19px}.bars .row{grid-template-columns:84px 1fr 66px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Yıldız Holding · Borsa İstanbul şirketleri</h1>
+      <div class="sub" id="updated">Yükleniyor…</div>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Para birimi">
+        <button data-cur="TRY" aria-pressed="true">TL</button>
+        <button data-cur="USD" aria-pressed="false">USD</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="warn" id="stale"></div>
+
+  <section class="kpis" id="kpis"></section>
+
+  <section class="card">
+    <h2>Şirket performansı ve sektöre göre durum</h2>
+    <p class="hint">Rozet: şirket getirisi ile kendi sektör endeksinin getirisi arasındaki fark (puan). Yeşil = sektörünü geçiyor, kırmızı = geride. Grafiği değiştirmek için bir satıra tıklayın.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Şirket</th><th>Fiyat</th><th>Piyasa değeri</th>
+          <th>1 Gün</th><th>1 Ay</th><th>Yılbaşından beri</th><th>1 Yıl</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="grid2">
+    <div class="card">
+      <div class="head-row">
+        <div><h2 id="cmpTitle">Şirket vs sektör</h2><p class="hint" id="cmpHint">Başlangıç = 100</p></div>
+        <div class="seg" role="group" aria-label="Dönem" id="rangeA"></div>
+      </div>
+      <div class="legend" id="cmpLegend"></div>
+      <div class="chart" id="cmpChart"></div>
+    </div>
+    <div class="card">
+      <h2>Piyasa değeri dağılımı</h2>
+      <p class="hint" id="barsHint">Grup içindeki pay</p>
+      <div class="bars" id="bars"></div>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:12px">
+    <div class="head-row">
+      <div><h2>Grup toplam piyasa değeri</h2><p class="hint" id="grpHint">7 şirketin toplamı</p></div>
+      <div class="seg" role="group" aria-label="Dönem" id="rangeB"></div>
+    </div>
+    <div class="chart" id="grpChart"></div>
+  </section>
+
+  <section class="card" style="margin-top:12px">
+    <h2>Değerleme: F/K ve PD/DD</h2>
+    <p class="hint">Sektör değeri = aynı sektördeki BIST şirketlerinin piyasa değeri ağırlıklı çarpanı (TradingView sınıflaması). Zarar eden şirketlerde F/K gösterilmez.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Şirket</th><th>Karşılaştırılan grup</th><th>F/K</th><th>Sektör F/K</th><th>PD/DD</th><th>Sektör PD/DD</th></tr></thead>
+        <tbody id="valBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="notes">
+    <p><b>Kaynaklar:</b> Fiyat ve endeks geçmişi TradingView; piyasa değeri, F/K, PD/DD TradingView; USD/TRY Yahoo Finance. Veriler yaklaşık 15 dakika gecikmelidir ve borsa açıkken saatte bir güncellenir.</p>
+    <p><b>Sektör endeksleri:</b> ULKER, BESLR → BIST Gıda İçecek (XGIDA) · SOKM, BIZIM → BIST Ticaret (XTCRT) · GOZDE → BIST Holding ve Yatırım (XHOLD) · PENTA → BIST Teknoloji (XUTEK) · MAKTK → BIST Metal Eşya Makina (XMESY). Genel karşılaştırma: BIST 100.</p>
+    <p><b>USD görünümü:</b> Her günün fiyatı o günün USD/TRY kuruyla çevrilir; böylece TL'deki enflasyon etkisi ayrışır. Bilgi amaçlıdır, yatırım tavsiyesi değildir.</p>
+  </div>
+</div>
+
+<script>
+const state={cur:'TRY',sel:'ULKER',rangeA:'1Y',rangeB:'1Y',data:null};
+const RANGES=[['1M','1A'],['YTD','YB'],['1Y','1Y']];
+const nf=(d)=>new Intl.NumberFormat('tr-TR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const css=(v)=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+/* ---------- data helpers ---------- */
+function makeLookup(hist){ // value on or before a date
+  const d=hist.map(r=>r[0]), v=hist.map(r=>r[1]);
+  return (date)=>{let lo=0,hi=d.length-1,ans=-1;while(lo<=hi){const m=(lo+hi)>>1;if(d[m]<=date){ans=m;lo=m+1}else hi=m-1}return ans<0?null:v[ans]};
+}
+let fxAt=null;
+function conv(hist){ // TRY series -> current currency
+  if(state.cur==='TRY')return hist;
+  return hist.map(([d,v])=>{const f=fxAt(d);return [d,f?v/f:null]}).filter(r=>r[1]!=null);
+}
+function shiftDate(iso,months){const d=new Date(iso+'T00:00:00Z');d.setUTCMonth(d.getUTCMonth()-months);return d.toISOString().slice(0,10)}
+function baseDate(last,key){
+  if(key==='1M')return shiftDate(last,1);
+  if(key==='1Y')return shiftDate(last,12);
+  if(key==='YTD')return (+last.slice(0,4)-1)+'-12-31';
+}
+function returns(hist){
+  if(!hist||hist.length<2)return {};
+  const last=hist[hist.length-1], at=makeLookup(hist), r={};
+  r['1D']=(last[1]/hist[hist.length-2][1]-1)*100;
+  for(const k of ['1M','YTD','1Y']){const b=at(baseDate(last[0],k));r[k]=b?(last[1]/b-1)*100:null}
+  return r;
+}
+function sliceRange(hist,key){const last=hist[hist.length-1][0];const b=baseDate(last,key);
+  const i=hist.findIndex(r=>r[0]>b);return hist.slice(Math.max(0,i-1));}
+function groupHistory(){
+  const D=state.data, dates=D.benchmarks.XU100.history.map(r=>r[0]);
+  const look=D.companies.map(c=>({at:makeLookup(c.history),sh:c.shares,first:c.history[0][0]}));
+  const start=look.reduce((m,l)=>l.first>m?l.first:m,'0');
+  return dates.filter(d=>d>=start).map(d=>[d,look.reduce((s,l)=>s+(l.at(d)||0)*l.sh,0)]);
+}
+
+/* ---------- formatting ---------- */
+function money(v,short=true){
+  if(v==null)return '–';
+  const usd=state.cur==='USD';
+  if(short){
+    if(Math.abs(v)>=1e9)return (usd?'$':'')+nf(Math.abs(v)>=1e11?0:1).format(v/1e9)+(usd?' mlr':' mlr TL');
+    if(Math.abs(v)>=1e6)return (usd?'$':'')+nf(0).format(v/1e6)+(usd?' mn':' mn TL');
+  }
+  return usd?'$'+nf(v<10?3:2).format(v):nf(2).format(v)+' TL';
+}
+function pct(v,d=1){if(v==null||isNaN(v))return '–';return (v>0?'+':v<0?'−':'')+nf(d).format(Math.abs(v))+'%'}
+function pp(v){return (v>0?'+':v<0?'−':'')+nf(1).format(Math.abs(v))+' puan'}
+function cls(v){return v>0?'pos':v<0?'neg':''}
+function fmtDateTR(iso){const [y,m,d]=iso.split('-');return `${d}.${m}.${y}`}
+
+/* ---------- render ---------- */
+function render(){
+  const D=state.data;
+  const bmRet={};for(const k in D.benchmarks)bmRet[k]=returns(conv(D.benchmarks[k].history));
+  const rows=D.companies.map(c=>{
+    const h=conv(c.history), r=returns(h), last=h[h.length-1][1];
+    const fx=state.cur==='USD'?fxAt(c.history[c.history.length-1][0]):1;
+    return {c,r,last,mcap:c.mcap/fx,b:bmRet[c.bench]};
+  });
+
+  // KPIs
+  const gh=conv(groupHistory()), gr=returns(gh), gLast=gh[gh.length-1][1];
+  const xr=returns(conv(D.benchmarks.XU100.history)), xLast=D.benchmarks.XU100.history.at(-1)[1];
+  const beat=rows.filter(x=>x.r['1M']!=null&&x.b['1M']!=null&&x.r['1M']>x.b['1M']).length;
+  const beatY=rows.filter(x=>x.r['YTD']!=null&&x.b['YTD']!=null&&x.r['YTD']>x.b['YTD']).length;
+  document.getElementById('kpis').innerHTML=`
+    <div class="card kpi"><div class="lab">Grup toplam piyasa değeri</div><div class="val">${money(gLast)}</div>
+      <div class="foot"><span class="${cls(gr['1D'])}">${pct(gr['1D'])}</span> bugün · <span class="${cls(gr['YTD'])}">${pct(gr['YTD'])}</span> yılbaşından beri</div></div>
+    <div class="card kpi"><div class="lab">BIST 100</div><div class="val">${nf(0).format(xLast)}</div>
+      <div class="foot"><span class="${cls(xr['1D'])}">${pct(xr['1D'])}</span> bugün · <span class="${cls(xr['YTD'])}">${pct(xr['YTD'])}</span> YB ${state.cur==='USD'?'(USD)':''}</div></div>
+    <div class="card kpi"><div class="lab">Sektörünü geçen şirket</div><div class="val">${beat} / ${rows.length}</div>
+      <div class="foot">son 1 ayda · yılbaşından beri ${beatY} / ${rows.length}</div></div>
+    <div class="card kpi"><div class="lab">USD / TRY</div><div class="val">${nf(2).format(D.fx.last)}</div>
+      <div class="foot">yılbaşından beri <span>${pct(returns(D.fx.history)['YTD'])}</span></div></div>`;
+
+  // performance table
+  const cell=(x,k)=>{
+    const v=x.r[k], b=x.b&&x.b[k];
+    let rel='';
+    if(v!=null&&b!=null){const d=v-b;rel=`<div><span class="rel ${d>=0?'up':'down'}" title="Sektör: ${pct(b)}">${d>=0?'▲':'▼'} ${pp(d)}</span></div>`}
+    return `<td><div class="ret ${cls(v)}">${pct(v)}</div>${rel}</td>`;
+  };
+  document.getElementById('tbody').innerHTML=rows.map(x=>`
+    <tr data-t="${x.c.ticker}" class="${x.c.ticker===state.sel?'sel':''}">
+      <td><div class="co">${x.c.name}</div><div class="tk">${x.c.ticker} · <span class="bm">${x.c.bench}</span></div></td>
+      <td>${money(x.last,false)}</td><td>${money(x.mcap)}</td>
+      ${cell(x,'1D')}${cell(x,'1M')}${cell(x,'YTD')}${cell(x,'1Y')}
+    </tr>`).join('');
+  document.querySelectorAll('#tbody tr').forEach(tr=>tr.onclick=()=>{state.sel=tr.dataset.t;render()});
+
+  // market cap bars
+  const tot=rows.reduce((s,x)=>s+x.mcap,0), mx=Math.max(...rows.map(x=>x.mcap));
+  document.getElementById('bars').innerHTML=[...rows].sort((a,b)=>b.mcap-a.mcap).map(x=>`
+    <div class="row" title="${x.c.name}: ${money(x.mcap)}"><div>${x.c.ticker}</div>
+      <div class="track"><div class="fill" style="width:${x.mcap/mx*100}%"></div></div>
+      <div class="v">%${nf(1).format(x.mcap/tot*100)}</div></div>`).join('');
+  document.getElementById('barsHint').textContent=`Grup içindeki pay · toplam ${money(tot)}`;
+
+  // comparison chart
+  const sel=D.companies.find(c=>c.ticker===state.sel);
+  const bm=D.benchmarks[sel.bench], xu=D.benchmarks.XU100;
+  const ser=[
+    {name:sel.ticker,color:css('--s1'),h:sliceRange(conv(sel.history),state.rangeA)},
+    {name:`${bm.name} (${sel.bench})`,color:css('--s2'),h:sliceRange(conv(bm.history),state.rangeA)},
+    {name:'BIST 100',color:css('--s3'),h:sliceRange(conv(xu.history),state.rangeA)},
+  ].map(s=>{const b=s.h[0][1];return {...s,h:s.h.map(([d,v])=>[d,v/b*100])}});
+  document.getElementById('cmpTitle').textContent=`${sel.name} vs sektör`;
+  document.getElementById('cmpHint').textContent=`Dönem başı = 100 · ${state.cur==='USD'?'USD bazında':'TL bazında'}`;
+  document.getElementById('cmpLegend').innerHTML=ser.map(s=>`<span><i style="background:${s.color}"></i>${s.name}</span>`).join('');
+  lineChart(document.getElementById('cmpChart'),ser,{height:260,fmt:v=>nf(1).format(v),tipFmt:(s,v)=>`${nf(1).format(v)} (${pct(v-100)})`});
+
+  // group chart
+  const g=sliceRange(gh,state.rangeB);
+  lineChart(document.getElementById('grpChart'),[{name:'Toplam piyasa değeri',color:css('--s1'),h:g}],
+    {height:240,area:true,fmt:v=>money(v),tipFmt:(s,v)=>money(v)});
+  const gch=(g.at(-1)[1]/g[0][1]-1)*100;
+  document.getElementById('grpHint').innerHTML=`7 şirketin toplamı · seçili dönemde <span class="${cls(gch)}">${pct(gch)}</span> ${state.cur==='USD'?'(USD)':'(TL)'}`;
+
+  // valuation
+  const vc=(v,s,lowGood=true)=>{
+    if(v==null)return '<td>–</td>';
+    let tag='';if(s){const d=(v/s-1)*100;tag=`<small>${d<0?'sektörün %'+nf(0).format(-d)+' altında':'sektörün %'+nf(0).format(d)+' üstünde'}</small>`}
+    return `<td><div class="val-cell"><span>${nf(1).format(v)}x</span>${tag}</div></td>`;
+  };
+  document.getElementById('valBody').innerHTML=D.companies.map(c=>`
+    <tr><td><div class="co">${c.name}</div><div class="tk">${c.ticker}</div></td>
+    <td style="color:var(--text2)">${c.peer_label||'–'} <span class="bm">(${c.peer_count||0} şirket)</span></td>
+    ${vc(c.pe,c.sector_pe)}<td>${c.sector_pe?nf(1).format(c.sector_pe)+'x':'–'}</td>
+    ${vc(c.pb,c.sector_pb)}<td>${c.sector_pb?nf(1).format(c.sector_pb)+'x':'–'}</td></tr>`).join('');
+}
+
+/* ---------- SVG line chart with crosshair tooltip ---------- */
+function lineChart(el,series,o){
+  const W=Math.max(280,el.clientWidth), H=o.height, m={t:8,r:12,b:26,l:64};
+  const all=series.flatMap(s=>s.h.map(r=>r[1])); let lo=Math.min(...all), hi=Math.max(...all);
+  const pad=(hi-lo)*0.08||1; lo-=pad; hi+=pad;
+  const dates=series[0].h.map(r=>r[0]); const t0=Date.parse(dates[0]), t1=Date.parse(dates.at(-1));
+  const x=d=>m.l+(Date.parse(d)-t0)/(t1-t0||1)*(W-m.l-m.r), y=v=>m.t+(hi-v)/(hi-lo)*(H-m.t-m.b);
+  const ticks=niceTicks(lo,hi,4);
+  let s=`<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${series.map(s=>s.name).join(', ')}">`;
+  for(const t of ticks){s+=`<line x1="${m.l}" x2="${W-m.r}" y1="${y(t)}" y2="${y(t)}" stroke="${css('--grid')}"/>`+
+    `<text x="${m.l-8}" y="${y(t)+4}" text-anchor="end" font-size="11" fill="${css('--muted')}">${o.fmt(t)}</text>`}
+  // month labels
+  const months=[];let lastM='';for(const d of dates){const k=d.slice(0,7);if(k!==lastM){months.push(d);lastM=k}}
+  const step=Math.ceil(months.length/Math.max(2,Math.floor((W-m.l)/70)));
+  const MN=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+  months.forEach((d,i)=>{if(i%step||i===0&&months.length>1&&dates[0]!==d)return;const mm=+d.slice(5,7)-1;
+    s+=`<text x="${x(d)}" y="${H-6}" font-size="11" text-anchor="middle" fill="${css('--muted')}">${MN[mm]}${mm===0?" '"+d.slice(2,4):''}</text>`});
+  for(const se of series){
+    const p=se.h.map(([d,v],i)=>`${i?'L':'M'}${x(d).toFixed(1)},${y(v).toFixed(1)}`).join('');
+    if(o.area)s+=`<path d="${p}L${x(se.h.at(-1)[0])},${H-m.b}L${x(se.h[0][0])},${H-m.b}Z" fill="${se.color}" opacity=".10"/>`;
+    s+=`<path d="${p}" fill="none" stroke="${se.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+  s+=`<line class="xh" y1="${m.t}" y2="${H-m.b}" stroke="${css('--muted')}" stroke-dasharray="3 3" opacity="0"/>`;
+  series.forEach((se,i)=>s+=`<circle class="dot${i}" r="4" fill="${se.color}" stroke="${css('--surface')}" stroke-width="2" opacity="0"/>`);
+  s+=`<rect x="${m.l}" y="0" width="${W-m.l-m.r}" height="${H}" fill="transparent"/></svg><div class="tip"></div>`;
+  el.innerHTML=s;
+  const svg=el.querySelector('svg'), tip=el.querySelector('.tip'), xh=el.querySelector('.xh');
+  const looks=series.map(se=>makeLookup(se.h));
+  const move=(ev)=>{
+    const r=svg.getBoundingClientRect(), px=(ev.clientX-r.left)*(W/r.width);
+    const t=t0+(px-m.l)/(W-m.l-m.r)*(t1-t0); let best=dates[0];
+    for(const d of dates){if(Math.abs(Date.parse(d)-t)<Math.abs(Date.parse(best)-t))best=d}
+    const X=x(best); xh.setAttribute('x1',X);xh.setAttribute('x2',X);xh.setAttribute('opacity',1);
+    let html=`<b>${fmtDateTR(best)}</b>`;
+    series.forEach((se,i)=>{const v=looks[i](best);const c=el.querySelector('.dot'+i);
+      if(v!=null){c.setAttribute('cx',X);c.setAttribute('cy',y(v));c.setAttribute('opacity',1)}
+      html+=`<div class="r"><span>${se.name}</span><em>${v!=null?o.tipFmt(se,v):'–'}</em></div>`});
+    tip.innerHTML=html; tip.style.opacity=1;
+    const sx=X*(r.width/W); const tw=tip.offsetWidth;
+    tip.style.left=Math.min(Math.max(0,sx+12+tw>r.width?sx-tw-12:sx+12),r.width-tw)+'px'; tip.style.top='8px';
+  };
+  const leave=()=>{tip.style.opacity=0;xh.setAttribute('opacity',0);series.forEach((_,i)=>el.querySelector('.dot'+i).setAttribute('opacity',0))};
+  svg.addEventListener('pointermove',move); svg.addEventListener('pointerleave',leave);
+}
+function niceTicks(lo,hi,n){const span=hi-lo, raw=span/n, mag=Math.pow(10,Math.floor(Math.log10(raw)));
+  const st=[1,2,2.5,5,10].map(k=>k*mag).find(k=>span/k<=n+1)||mag*10;const out=[];
+  for(let v=Math.ceil(lo/st)*st;v<=hi;v+=st)out.push(+v.toFixed(10));return out}
+
+/* ---------- controls ---------- */
+function seg(id,key){const el=document.getElementById(id);
+  el.innerHTML=RANGES.map(([k,l])=>`<button data-k="${k}" aria-pressed="${state[key]===k}">${l}</button>`).join('');
+  el.onclick=e=>{const b=e.target.closest('button');if(!b)return;state[key]=b.dataset.k;
+    el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));render()};}
+document.querySelector('[aria-label="Para birimi"]').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+  state.cur=b.dataset.cur;document.querySelectorAll('[data-cur]').forEach(x=>x.setAttribute('aria-pressed',x===b));render()};
+let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>state.data&&render(),150)});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>state.data&&render());
+
+fetch('data.json?t='+Date.now()).then(r=>r.json()).then(D=>{
+  state.data=D; fxAt=makeLookup(D.fx.history.concat([[new Date().toISOString().slice(0,10),D.fx.last]]));
+  seg('rangeA','rangeA'); seg('rangeB','rangeB');
+  const up=new Date(D.updated_at);
+  const lastBar=D.companies[0].history.at(-1)[0];
+  document.getElementById('updated').textContent=`Son güncelleme: ${up.toLocaleString('tr-TR',{timeZone:'Europe/Istanbul',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})} · son işlem günü ${fmtDateTR(lastBar)} · veriler ~15 dk gecikmeli`;
+  const ageH=(Date.now()-up.getTime())/36e5, wd=new Date().getDay();
+  if(ageH>26&&wd>=2&&wd<=5){const w=document.getElementById('stale');w.style.display='block';w.textContent=`Veriler ${Math.round(ageH)} saattir güncellenmedi. Otomatik güncelleme çalışmamış olabilir.`}
+  render();
+}).catch(e=>{document.querySelector('.wrap').innerHTML='<div class="err">Veri yüklenemedi. Lütfen sayfayı yenileyin.</div>';console.error(e)});
+</script>
+</body>
+</html>
