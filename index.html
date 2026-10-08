@@ -116,6 +116,19 @@ tbody.click tr:hover td{background:var(--surface2)}
 .lg-all{border:0;background:var(--chip);color:var(--text2);font:inherit;font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px;cursor:pointer}
 .pop ol.one{grid-template-columns:1fr}
 .hint-term{border-bottom:1px dotted currentColor;cursor:help}
+.sec-head{margin:28px 0 12px;padding-top:18px;border-top:2px solid var(--line)}
+.sec-title{font-size:18px;margin:0 0 4px;letter-spacing:-.01em}
+.heat td.h{font-weight:600;padding:9px 10px}
+.heat td.h span{display:inline-block;min-width:92px;padding:4px 8px;border-radius:6px}
+.heat .u1 span{background:color-mix(in srgb,var(--up) 12%,transparent);color:var(--up)}
+.heat .u2 span{background:color-mix(in srgb,var(--up) 28%,transparent);color:var(--up)}
+.heat .u3 span{background:color-mix(in srgb,var(--up) 48%,transparent);color:var(--text)}
+.heat .d1 span{background:color-mix(in srgb,var(--down) 12%,transparent);color:var(--down)}
+.heat .d2 span{background:color-mix(in srgb,var(--down) 28%,transparent);color:var(--down)}
+.heat .d3 span{background:color-mix(in srgb,var(--down) 48%,transparent);color:var(--text)}
+.heat tr.me td{background:var(--surface2)}
+.heat tr.sep td{border-top:2px solid var(--line)}
+.flag{color:var(--muted);font-size:12px}
 .term-pop{position:fixed;z-index:50;width:min(340px,calc(100vw - 32px));background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.18);padding:12px 14px;font-size:12.5px;line-height:1.5;text-align:left;white-space:normal;font-weight:400}
 .term-pop h3{margin:0 0 4px;font-size:13px;font-weight:600}
 .term-pop p{margin:0 0 6px;color:var(--text2)}.term-pop p:last-child{margin:0}
@@ -294,6 +307,49 @@ tbody.click tr:hover td{background:var(--surface2)}
       <p class="hint" id="mcapHint"></p>
       <div class="bars mbars num" id="mcapBars"></div>
     </div>
+
+    <section id="globalSec" hidden>
+      <div class="sec-head"><h2 class="sec-title">Global Benchmark</h2><p class="hint">Ülker'in global emsalleri. Para birimleri ve piyasalar farklı olduğu için fiyatlar değil, her şirketin <b>kendi pazarına göre durumu</b> karşılaştırılır.</p></div>
+
+      <div class="card">
+        <h2>Her şirket kendi endeksine göre</h2>
+        <p class="hint">Hücre = şirket getirisi − kendi ana endeksinin getirisi (puan, yerel para birimi). Yeşil = pazarını geçiyor, kırmızı = geride. Sütun ağırlıklı kırmızıysa sektör genelinde bir trend var demektir.</p>
+        <div class="tbl-wrap">
+          <table class="num heat">
+            <thead><tr><th>Şirket</th><th>Kendi endeksi</th><th>1 Ay</th><th>Yılbaşından beri</th><th>1 Yıl</th></tr></thead>
+            <tbody id="heatBody"></tbody>
+          </table>
+        </div>
+        <p class="hint" id="heatSummary" style="margin:12px 0 0"></p>
+      </div>
+
+      <div class="card mt">
+        <div class="head-row">
+          <div><h2>Ülker vs global rakipler · USD bazında</h2><p class="hint" id="glHint">Dönem başı = 100 · tüm çizgiler USD</p></div>
+          <div class="seg" role="group" aria-label="Dönem" id="rangeGL"></div>
+        </div>
+        <div style="margin:-4px 0 12px" id="glInfo"></div>
+        <div class="legend" id="glLegend"></div>
+        <div class="chart" id="glChart"></div>
+        <div class="tbl-wrap" style="margin-top:14px">
+          <table class="num cmp-tbl">
+            <thead><tr><th></th><th>1 Gün</th><th>1 Ay</th><th>Yılbaşından beri</th><th>1 Yıl</th></tr></thead>
+            <tbody id="glBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card mt">
+        <h2>Değerleme: Ülker ve global emsaller</h2>
+        <p class="hint">Piyasa değerleri USD. Global şirketlerin çarpanları genelde daha yüksektir; farkın bir kısmı Türkiye risk primidir, şirketle ilgili değildir.</p>
+        <div class="tbl-wrap">
+          <table class="num">
+            <thead><tr><th>Şirket</th><th>Ülke</th><th><span class="hint-term" data-m="mcap">Piyasa değeri</span></th><th><span class="hint-term" data-m="pe">F/K</span></th><th><span class="hint-term" data-m="pb">PD/DD</span></th><th><span class="hint-term" data-m="ev">FD/FAVÖK</span></th></tr></thead>
+            <tbody id="glValBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
   </section>
 
   <div class="notes">
@@ -305,7 +361,7 @@ tbody.click tr:hover td{background:var(--surface2)}
 </main>
 
 <script>
-const state={page:'grup',cur:'TRY',sel:'ULKER',rangeG:'1Y',rangeP:'1Y',rangeC:'1Y',rangeGC:'1Y',data:null,hidden:new Set(),visFor:null,ghidden:new Set()};
+const state={page:'grup',cur:'TRY',sel:'ULKER',rangeG:'1Y',rangeP:'1Y',rangeC:'1Y',rangeGC:'1Y',rangeGL:'1Y',data:null,hidden:new Set(),visFor:null,ghidden:new Set(),glhidden:null};
 const nf=(d)=>new Intl.NumberFormat('tr-TR',{minimumFractionDigits:d,maximumFractionDigits:d});
 const css=(v)=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const $=(id)=>document.getElementById(id);
@@ -503,6 +559,64 @@ function renderCompany(rows,bm){const D=state.data;const x=rows.find(r=>r.c.tick
   $('mcapBars').innerHTML=mrows.map(r=>`<div class="row ${r.me?'me':''}" title="${r.name}"><div class="co">${r.t}</div>
     <div class="track"><div class="fill" style="width:${Math.max(r.mcap/mmax*82,0.6)}%"></div><span class="lbl">${money(r.mcap)}</span></div>
     <div class="v ${cls(r.ytd)}">${pct(r.ytd)}</div></div>`).join('');
+  // global benchmark (ULKER only)
+  const G=D.global;
+  if(c.ticker==='ULKER'&&G&&G.peers&&G.peers.length){$('globalSec').hidden=false;renderGlobal(c,x,bm,G)}else $('globalSec').hidden=true;
+}
+
+/* ---------- Global benchmark ---------- */
+function toUSD(hist){return hist.map(([d,v])=>{const f=fxAt(d.slice(0,10));return [d,f?v/f:null]}).filter(r=>r[1]!=null)}
+function renderGlobal(c,x,bm,G){const D=state.data;
+  if(state.glhidden===null)state.glhidden=new Set(G.peers.map(p=>p.t));
+  const K=['1M','YTD','1Y'];
+  const heatCls=v=>{if(v==null)return '';const a=Math.abs(v);const lvl=a<3?1:a<10?2:3;return (v>=0?'u':'d')+lvl};
+  const hcell=(r,b)=>K.map(k=>{const v=r[k]!=null&&b[k]!=null?r[k]-b[k]:null;return `<td class="h ${heatCls(v)}"><span>${v==null?'–':(v>=0?'▲ ':'▼ ')+pp(v)}</span></td>`}).join('');
+  const ulTL=returns(c.history),xuTL=returns(D.benchmarks.XU100.history),xgTL=returns(D.benchmarks[c.bench].history);
+  const prow=G.peers.map(p=>{const r=returns(p.history),b=returns(G.indices[p.bench].history);return {p,r,b}});
+  $('heatBody').innerHTML=
+    `<tr class="me"><td><div class="cocell">${logo(c,24)}<div><div class="co">Ülker</div><div class="tk">ULKER · Türkiye</div></div></div></td><td style="color:var(--text2)">BIST 100</td>${hcell(ulTL,xuTL)}</tr>`+
+    `<tr class="me"><td><div class="cocell"><span style="width:24px"></span><div><div class="co">Ülker</div><div class="tk">sektör endeksine göre</div></div></div></td><td style="color:var(--text2)">BIST Gıda İçecek</td>${hcell(ulTL,xgTL)}</tr>`+
+    prow.map(({p,r,b},i)=>`<tr class="${i===0?'sep':''}"><td><div class="cocell">${logo({ticker:p.t,logoid:p.logoid},24)}<div><div class="co">${p.name}</div><div class="tk">${p.t} · ${p.country}</div></div></div></td><td style="color:var(--text2)">${G.indices[p.bench].name}</td>${hcell(r,b)}</tr>`).join('');
+  const summ=K.map(k=>{const n=prow.filter(({r,b})=>r[k]!=null&&b[k]!=null&&r[k]<b[k]).length;return [k,n]});
+  const lab={'1M':'son 1 ayda','YTD':'yılbaşından beri','1Y':'son 1 yılda'};
+  $('heatSummary').innerHTML='<b>Özet:</b> '+summ.map(([k,n])=>`${lab[k]} ${G.peers.length} global şirketten <b>${n}</b>'i kendi endeksinin gerisinde`).join(' · ')+'.';
+  // USD chart
+  const GC=['#eda100','#e87ba4','#008300','#e34948','#0a8f9c','#a0522d','#7b5cd6','#5a6b7a'];
+  const ser=[{key:'ULKER',name:'ULKER (USD)',color:css('--s1'),h:sliceRange(toUSD(c.history),state.rangeGL),w:2.2},
+    {key:'XGLOBAL',name:'Global rakip endeksi (XGLOBAL)',color:css('--s4'),h:sliceRange(G.index.history,state.rangeGL),w:2.2},
+    {key:'XLP',name:'S&P 500 Tüketim Malları (XLP)',color:css('--s2'),h:sliceRange(G.indices.XLP.history,state.rangeGL),w:2},
+    {key:'^GSPC',name:'S&P 500',color:css('--s3'),h:sliceRange(G.indices['^GSPC'].history,state.rangeGL),w:2},
+    ...G.peers.map((p,i)=>({key:p.t,name:p.t,color:GC[i%8],h:sliceRange(p.history_usd,state.rangeGL),w:1.5,dash:'4 3',peer:true}))]
+    .map(s=>{const b=s.h[0]?s.h[0][1]:1;return {...s,h:s.h.map(([d,v])=>[d,v/b*100])}});
+  const vis=ser.filter(s=>!state.glhidden.has(s.key));
+  const allOn=G.peers.every(p=>!state.glhidden.has(p.t));
+  const chip=s=>`<button class="lg ${state.glhidden.has(s.key)?'off':''} ${s.peer?'peer':''}" data-k="${s.key}" aria-pressed="${!state.glhidden.has(s.key)}" title="${s.peer?G.peers.find(p=>p.t===s.key).name:s.name}"><i style="background:${s.color}${s.dash?';background:repeating-linear-gradient(90deg,'+s.color+' 0 4px,transparent 4px 7px)':''}"></i>${s.name}</button>`;
+  $('glLegend').innerHTML=ser.filter(s=>!s.peer).map(chip).join('')+'<span class="lg-sep"></span>'+ser.filter(s=>s.peer).map(chip).join('')+`<button class="lg-all" id="glAll">${allOn?'Rakipleri gizle':'Tüm rakipleri göster'}</button>`;
+  $('glLegend').querySelectorAll('.lg').forEach(b=>b.onclick=()=>{const k=b.dataset.k;if(k==='ULKER')return;state.glhidden.has(k)?state.glhidden.delete(k):state.glhidden.add(k);render()});
+  $('glAll').onclick=()=>{allOn?G.peers.forEach(p=>state.glhidden.add(p.t)):G.peers.forEach(p=>state.glhidden.delete(p.t));render()};
+  const popIcon=`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6.5"/><path d="M8 7.2v4M8 4.8v.1" stroke-linecap="round"/></svg>`;
+  const gm=G.index.members;
+  $('glInfo').innerHTML=`<div class="info" id="info3"><button class="info-btn" aria-expanded="false" aria-controls="pop3">${popIcon}XGLOBAL bileşenleri ve ağırlıkları · ${gm.length} şirket</button>
+    <div class="pop" id="pop3" role="dialog" aria-label="XGLOBAL bileşenleri"><h3>Global rakip endeksi (XGLOBAL)</h3>
+      <p>USD bazında, piyasa değeri ağırlıklı, tek şirket en fazla %${Math.round(G.index.cap*100)} · her gün yeniden dengelenir</p>
+      <ol class="one">${gm.map((m,i)=>`<li title="${m[1]}"><span>${i+1}</span><b>${m[0]}</b><em>${m[1]}</em><u class="num">$${nf(0).format(m[2]/1e9)} mlr · %${nf(1).format(m[3]*100)}</u></li>`).join('')}</ol></div></div>`;
+  const i3=$('info3'),b3=i3.querySelector('button');b3.onclick=e=>{e.stopPropagation();const o=i3.classList.toggle('open');b3.setAttribute('aria-expanded',o)};
+  document.addEventListener('click',e=>{if(!i3.contains(e.target))i3.classList.remove('open')},{once:true});
+  lineChart($('glChart'),vis.length?vis:ser.slice(0,1),{height:300,fmt:v=>nf(0).format(v),tipFmt:v=>`${nf(1).format(v)} (${pct(v-100)})`,endLabels:true});
+  const KK=['1D','1M','YTD','1Y'];
+  const rowOf=s=>s.key==='ULKER'?returns(toUSD(c.history)):s.key==='XGLOBAL'?returns(G.index.history):s.peer?returns(G.peers.find(p=>p.t===s.key).history_usd):returns(G.indices[s.key].history);
+  $('glBody').innerHTML=vis.map(s=>`<tr><td><span style="display:inline-flex;align-items:center;gap:8px"><i style="width:12px;height:3px;border-radius:2px;background:${s.color};display:inline-block${s.dash?';background:repeating-linear-gradient(90deg,'+s.color+' 0 3px,transparent 3px 5px)':''}"></i>${s.peer?s.key+' · '+G.peers.find(p=>p.t===s.key).name:s.name}</span></td>${KK.map(k=>`<td class="${cls(rowOf(s)[k])}">${pct(rowOf(s)[k])}</td>`).join('')}</tr>`).join('')+
+    (state.glhidden.has('XGLOBAL')?'':`<tr><td style="font-weight:600">Fark (ULKER − XGLOBAL)</td>${KK.map(k=>{const a=returns(toUSD(c.history))[k],b=returns(G.index.history)[k];return `<td>${relBadge(a,b).replace(/<\/?div>/g,'')||'–'}</td>`}).join('')}</tr>`);
+  // valuation
+  const usdM=v=>v==null?'–':'$'+(v>=1e9?nf(v>=1e11?0:1).format(v/1e9)+' mlr':nf(0).format(v/1e6)+' mn');
+  const mx=v=>v==null?'–':nf(1).format(v)+'x';
+  const ulUsd=c.mcap/(fxAt(c.history.at(-1)[0])||D.fx.last);
+  const vrows=[{t:'ULKER',name:'Ülker Bisküvi',country:'Türkiye',mcap:ulUsd,pe:c.pe,pb:c.pb,ev:c.ev_ebitda,me:true,logoid:c.logoid},
+    ...G.peers.map(p=>({t:p.t,name:p.name,country:p.country,mcap:p.mcap_usd,pe:p.pe,pb:p.pb,ev:p.ev_ebitda,logoid:p.logoid}))];
+  const med=a=>{const v=a.filter(x=>x!=null).sort((x,y)=>x-y);return v.length?v[(v.length-1)>>1]:null};
+  const pm=med(G.peers.map(p=>p.pe)),bmd=med(G.peers.map(p=>p.pb)),em=med(G.peers.map(p=>p.ev_ebitda));
+  $('glValBody').innerHTML=vrows.map(r=>`<tr class="${r.me?'me':''}" style="${r.me?'background:var(--surface2)':''}"><td><div class="cocell">${logo({ticker:r.t,logoid:r.logoid},24)}<div><div class="co">${r.name}</div><div class="tk">${r.t}</div></div></div></td><td style="color:var(--text2)">${r.country}</td><td>${usdM(r.mcap)}</td><td>${mx(r.pe)}</td><td>${mx(r.pb)}</td><td>${mx(r.ev)}</td></tr>`).join('')+
+    `<tr><td style="font-weight:600">Global emsal medyanı</td><td></td><td></td><td style="font-weight:600">${mx(pm)}</td><td style="font-weight:600">${mx(bmd)}</td><td style="font-weight:600">${mx(em)}</td></tr>`;
 }
 
 /* ---------- SVG line chart ---------- */
@@ -564,6 +678,7 @@ const TERMS={
   spe:{t:'Sektör F/K',p:['Şirketin bağlı olduğu BIST sektör endeksindeki şirketlerin F/K\'sı, piyasa değeri ağırlıklı. Büyük şirketler daha çok etkiler.','Şirket F/K\'sı sektörün <b>altındaysa</b> emsallerine göre ucuz, <b>üstündeyse</b> pahalı fiyatlanıyor demektir.']},
   pb:{t:'PD/DD · Piyasa Değeri / Defter Değeri',p:['Piyasa değerinin, bilançodaki özkaynağa bölümü. <b>"Varlıklarının kaç katına alınıyor"</b> demek.','<b>1\'in altı:</b> piyasa şirkete bilançodaki özkaynağından az değer biçiyor. <b>Yüksekse:</b> marka, büyüme gibi bilançoda görünmeyen değer fiyatlanıyor.','Perakende ve holding gibi sektörlerde doğal olarak farklı seviyelerde olur; sektörle kıyaslanır.']},
   spb:{t:'Sektör PD/DD',p:['Sektör endeksindeki şirketlerin PD/DD\'si, piyasa değeri ağırlıklı.','Şirket değeri sektörün <b>altındaysa</b> defter değerine göre daha ucuz, <b>üstündeyse</b> daha pahalı fiyatlanıyor.']},
+  ev:{t:'FD/FAVÖK · Firma Değeri / FAVÖK',p:['Firma değeri (piyasa değeri + net borç), faiz, vergi ve amortisman öncesi kârın kaç katı. Borcu da hesaba kattığı için F/K\'dan daha adil bir kıyas sağlar.','<b>Düşükse</b> ucuz, <b>yüksekse</b> pahalı ya da güçlü büyüme bekleniyor. Ülkeler arası kıyasta en çok kullanılan çarpandır.']},
   mcap:{t:'Piyasa değeri',p:['Hisse fiyatı × toplam hisse adedi. Borsanın şirketin tamamına biçtiği fiyat.','Hisse adedi sabitken fiyatla birlikte hareket eder. USD görünümünde günün kuruyla çevrilir.']}};
 let termEl=null;
 function showTerm(el){const m=TERMS[el.dataset.m];if(!m)return;hideTerm();termEl=document.createElement('div');termEl.className='term-pop';termEl.setAttribute('role','tooltip');
@@ -595,6 +710,7 @@ fetch('data.json?t='+Date.now()).then(r=>r.json()).then(D=>{
   seg('rangeP','rangeP',[['1H','1H'],['1M','1A'],['YTD','YB'],['1Y','1Y']]);
   seg('rangeC','rangeC',[['1M','1A'],['YTD','YB'],['1Y','1Y']]);
   seg('rangeGC','rangeGC',[['1M','1A'],['YTD','YB'],['1Y','1Y']]);
+  seg('rangeGL','rangeGL',[['1M','1A'],['YTD','YB'],['1Y','1Y']]);
   const up=new Date(D.updated_at),lastBar=D.companies[0].history.at(-1)[0];
   $('updated').textContent=`Son güncelleme: ${up.toLocaleString('tr-TR',{timeZone:'Europe/Istanbul',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})} · son işlem günü ${fmtDateTR(lastBar)}`;
   $('srcline').textContent='Veriler ~15 dk gecikmeli · borsa açıkken saatte bir güncellenir';
