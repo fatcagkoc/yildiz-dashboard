@@ -115,6 +115,11 @@ tbody.click tr:hover td{background:var(--surface2)}
 .lg-sep{width:1px;height:18px;background:var(--line);margin:0 2px}
 .lg-all{border:0;background:var(--chip);color:var(--text2);font:inherit;font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px;cursor:pointer}
 .pop ol.one{grid-template-columns:1fr}
+.hint-term{border-bottom:1px dotted currentColor;cursor:help}
+.term-pop{position:fixed;z-index:50;width:min(340px,calc(100vw - 32px));background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.18);padding:12px 14px;font-size:12.5px;line-height:1.5;text-align:left;white-space:normal;font-weight:400}
+.term-pop h3{margin:0 0 4px;font-size:13px;font-weight:600}
+.term-pop p{margin:0 0 6px;color:var(--text2)}.term-pop p:last-child{margin:0}
+.term-pop b{color:var(--text)}
 .pop li u{text-decoration:none;color:var(--text2);margin-left:auto;font-size:11.5px;white-space:nowrap}
 .bars.mbars .row{grid-template-columns:64px 1fr 72px}
 .bars.mbars .track{position:relative;height:18px;display:flex;align-items:center}
@@ -203,8 +208,23 @@ tbody.click tr:hover td{background:var(--surface2)}
       <p class="hint">Rozet: şirket getirisi ile kendi sektör endeksinin getirisi arasındaki fark (puan). Yeşil = sektörünü geçiyor, kırmızı = geride. Şirket detayı için satıra tıklayın.</p>
       <div class="tbl-wrap">
         <table class="num">
-          <thead><tr><th>Şirket</th><th>Fiyat</th><th>Piyasa değeri</th><th>1 Gün</th><th>1 Ay</th><th>Yılbaşından beri</th><th>1 Yıl</th></tr></thead>
+          <thead><tr><th>Şirket</th><th>Fiyat</th><th><span class="hint-term" data-m="mcap">Piyasa değeri</span></th><th>1 Gün</th><th>1 Ay</th><th>Yılbaşından beri</th><th>1 Yıl</th></tr></thead>
           <tbody id="tbody" class="click"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card mt">
+      <div class="head-row">
+        <div><h2>7 şirket ve BIST 100</h2><p class="hint" id="gcHint">Dönem başı = 100</p></div>
+        <div class="seg" role="group" aria-label="Dönem" id="rangeGC"></div>
+      </div>
+      <div class="legend" id="gcLegend"></div>
+      <div class="chart" id="gcChart"></div>
+      <div class="tbl-wrap" style="margin-top:14px">
+        <table class="num cmp-tbl">
+          <thead><tr><th></th><th>1 Gün</th><th>1 Ay</th><th>Yılbaşından beri</th><th>1 Yıl</th></tr></thead>
+          <tbody id="gcBody"></tbody>
         </table>
       </div>
     </div>
@@ -229,7 +249,7 @@ tbody.click tr:hover td{background:var(--surface2)}
       <p class="hint">Sektör değeri = şirketin bağlı olduğu BIST sektör endeksindeki şirketlerin piyasa değeri ağırlıklı çarpanı. Zarar eden şirketlerde F/K gösterilmez.</p>
       <div class="tbl-wrap">
         <table class="num">
-          <thead><tr><th>Şirket</th><th>Karşılaştırılan endeks</th><th>F/K</th><th>Sektör F/K</th><th>PD/DD</th><th>Sektör PD/DD</th></tr></thead>
+          <thead><tr><th>Şirket</th><th>Karşılaştırılan endeks</th><th><span class="hint-term" data-m="pe">F/K</span></th><th><span class="hint-term" data-m="spe">Sektör F/K</span></th><th><span class="hint-term" data-m="pb">PD/DD</span></th><th><span class="hint-term" data-m="spb">Sektör PD/DD</span></th></tr></thead>
           <tbody id="valBody" class="click"></tbody>
         </table>
       </div>
@@ -285,7 +305,7 @@ tbody.click tr:hover td{background:var(--surface2)}
 </main>
 
 <script>
-const state={page:'grup',cur:'TRY',sel:'ULKER',rangeG:'1Y',rangeP:'1Y',rangeC:'1Y',data:null,hidden:new Set(),visFor:null};
+const state={page:'grup',cur:'TRY',sel:'ULKER',rangeG:'1Y',rangeP:'1Y',rangeC:'1Y',rangeGC:'1Y',data:null,hidden:new Set(),visFor:null,ghidden:new Set()};
 const nf=(d)=>new Intl.NumberFormat('tr-TR',{minimumFractionDigits:d,maximumFractionDigits:d});
 const css=(v)=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const $=(id)=>document.getElementById(id);
@@ -326,8 +346,10 @@ function pct(v,d=1){if(v==null||isNaN(v))return '–';return (v>0?'+':v<0?'−':
 function pp(v){return (v>0?'+':v<0?'−':'')+nf(1).format(Math.abs(v))+' puan'}
 function cls(v){return v>0?'pos':v<0?'neg':''}
 function fmtDateTR(s){const [y,m,d]=s.slice(0,10).split('-');return `${d}.${m}.${y}`+(s.length>10?' '+s.slice(11,16):'')}
+const LOGO_OVERRIDE={BESLR:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHAAAABwCAIAAABJgmMcAAARrElEQVR42u2cebQfRZXHv7eqevn1b3trXgLZhEBIiDkQGMkgmKAEcExEJeMIBkPOAAERMIoKAjqADoJEUVkPGkFcWaKDgMgWQVkGQ8BJJAQSQhaS9/L27bd0d907f/TvZR8SIJyjY3/PO+/8zjv1uqs+deveW7f61wRg+fLlkyZNYmalFFK9M6UEU6Ap0BRoqhRoCjQFmioFmgJNgaZKgaZAU6Ap0FQp0BRoCjRVCjQFmgJNlQJNgaZAU6VAU6Ap0BRoqhRoCjQFmioFmgJNgaZKgaZAU6CpUqAp0BRoCjRVCvRvTOZvqjcCEREIABAREe3SoCb6fwFULISYVM2yRUDJLwiYWYS0ViBKBswCQEjefBkQMYSEIbCijSairbQ4jkUprRREICI1wCQQhoBAQgTani4LM5GxBCWgpHPbZotAxCQQkACAEAGsZIdLQISFmaG0IQVAqNZ8b2byrQBlCClRIIABXSOXjBFa17BZtlBaJXZGpN60ByJiFQmLUQoG/VG4vnVTpVz2XG94U1NTrgAgZoZSWsQSFEjVpkEAsaQI0NvPD4M1QcOCanO7DQUBEAUREmEQsSIHUDtDIlJQSgOwzIpIQExQe7cs9hZo8tXau5589Lq7bs/mi2xjRcQ18xCjzaj65umTDjv5Ax9qCnJxHJFxnlu98sIbrzW+B5ad7IhAsbUNQe7nX76ikM1rpToHBxbe+7N7n3p8Y19HXI0co4u5wrQJh136yTMOHfOeahQax73ryUcW/ur2TF1dWC7fesGlh489UFlWqgYkseDeKDz9qku3DPQZo4kh2y8OEhCF5ep3z1pwzITJnf19cxde0T7Yr4xSUqNFgICKQe7wUQfMOnra1PETIRDLpBQTtOw7CxURAJu62l9Y8TzqG2FjxBbCtTsYDZGfPv6bqxff/sPPXT598hQAvYODf17xAjIZiIAZwjWLEYAIcZQp1JXjqA7Y0N318f9Y8PxLL6JQQBwisqHW5dj+Ysn9Dz335C8u//aJk48EsKmrY9nyZWhqRnmgr1ICwATacblasc++sqKjpxOOC7awFkRIQJCANMqD7X29IIQc/+nV5b29PTAalsFJSwEpKP27/15yza9/Mve4j1x77hcbXV+YSat96UMTH+IZrYIg8DOhjRuy+YzjsgiA9p6uUlTNBsU1bZtm/+fFf/jODyftN1oRmSDr+hkrNudlMo7LwsnYEgttzOU1KQBfXvT9519+MRjWUhromz7xiPEto1a1v/HEihcKhYa+uHLmdVc88d1FBzQ2a21UNpfzgkGGR7sfHgFBxtfVwNHGMaboZViEUPM/BqpULedcPwl6QSYzEFYdrV1tin7AzEQUxtGWvh54GeV6i+6/p7W35+7LvpVR2gKa9rzq9xYo1Vw+MYOJwnL5pouuOn7yEZU4IqKNmzdddMeNj/3lz8VcXWd32w8fWHz9WZ8Xa2OCR1IdGPjGnHPmHXdSJYqVHnKqAhCa88UN3Z2PLH3a1DWU+/ov+dS8b356ftLg5t/f99nrr4DWHeXOZ5e/cMD0E4SZJVkaMQ/1apcREjOEVKU0cNIxx9923leqcayVGrohwFIMsgC00sIChcrgwEemnXjrORdVopC0ttXohddXX/qTm1a8sTY7YviDTz320yW/O3vGLGELpd+9tEmKfpD3M3n2oahp3Pibz7v4iAtPj8KYjP/SG+sAaFIQEQJY6oNcY76I3fmgjp6uUhzGcTRh1Hu+OnsuiZTCSsbxzj3xo1va2zLZ4ONTp49ubEoQ7H36BZGM6zXli7tzXzvHh7zjN+aLEEmc0qhhLRP2Hz31i/N64wr57m+eXnL2jFlaiHcMgPs4D63EcWyttZZIGa3qCkXX93sqFVgU/RwAAUMoJkChamuNtdbbvDLB0aalrqHo+NUwHDGs5Ypf3nbt3PMDLxNFIYv++pyzkrYh27fcPyJmjq21zImF0lbfRTCkt197lpmFbRwrbUQQcXzQ/qPGjh69bNVLULqtrxuAIrU3nXjbOyUpBIHR2nNd1zFKqe//1y86uztBIlz91PQTACS3V0KwyDpe0thoXfsxxtEmZrtffePMI4/l3q6GbP5Hj95/4mUXPLVyheO4ntZgKUURs9DORrVHmASR5Eae4yQfEhmtaZeLkSJFynGMVspolXHcVZs3vbZxo84ExDwm3wjAgvdl2rRTxFeOd/Xdd4xpHFblWIFeWb/2yVUrfDcwLAtOP/cTU48FYJQGmJlV1r/hwXt+v/TpiFkBREJKlQcH5xw/85T3H8exveqs85euf3n95o1jmvZ75Pk/PrFi2b/PmLVg9meGF+rzGT+yMYS3BkbZU/AkAVvWnv/0yv857drLI+ZkQ6BIlcPKlLEHXTbnzJpbGMIfxfFApRLHMRkdR9Hzq1/56u039JQGstn8YLl88rQPJaPel2nTzkCNefDZP8BGtTu4bpAthJXKhR/7zJWfPoutpSTRJyGGR87SVSuW/vUFKAVhEKA0eroPHTdh9jEfjCDD84UlV99656P3v9q2+cWXV4RafrzkoTXtbVntzJ0x6+Spx4RhZdvdaU9QAYgY11nb3rp249odBlvuaz/s6CFPQgCstSbI3v/iM++9cA5btsTW2raOTlEwvjfYunn2CbP+bdoJYnmbs3o3fKgIN9Y3+8ZhYSIarJR6B7qdTO4Hi+98o+2NG8+/pKB1TAKBAkLiXD6fVSYGK1GW4Cg9oLxCJgCgiKzlOi9z/qxPVqNw6viJ31v8894ohFYbB3o+dtnnbrn4G/OPn/lWe8giWdfLZgtJYkeAaFUu+8ML9Tt7PaVKfQP9W9rgOcrxWcQEvgpjN5T5p5515Rnn+Kjt+/bCQN8WUKWULVVvXHDlhyZPqcSRUmqwv++WR+/7/r0/F9//6e/uaSw2XH/mBcwMgJS2/f1fOXv+GR84oRSHDpnEFTFzUzYvABNpAIoAOI572rEzTj1mxs+eeGTZ6pVr2luR9S+48ZojRx94xMETkgvujbRSUbl0wtHH3Tz/okocJ69PUoIYkjVOEqZoyNvaKBo5fPhRB01c19b63OqXvCCI+vunHzb1lvMvPnDYcABWRCXt350ln5QVZFg+35TL1/5WqFs493Or1q17YOkfM/XD7nz8gSvnnOU7LkRYA+D9csWRDU279odFXKUALN+wNuf5o5taQmat1JzpM6YeMun8WxeCTFgt/+ix3x5x8ATZLjTRHtNm5oKXGdXQtLtttN3OOMiWStMPPfz2Cy/rKpWO/dKZqza+rgL/L2tfHigNQiRmNlrXBr0Xif3biPK1a1bCMIrjclgNbVSuVgAcNHI0ohBGdQ32v96+JWNcCCVOsxxHURwPhJUwDqtxFMZRNQ7DOCTIrx5/+MSvLZjy2VOvufdOrRSsjSQO42h4Y9Or69dqpckxa1s3AzBD23YoRMyxtaGNQxtHNo6sDWMrQ3t3IQLIWpv0sBpH1TiqxFEYx2EcR7tgYcvM3BAE3zv3SyTQZNp7u0+99vLuSlkRbJJN711x5O2mTSLFXMExJuN6rnYynr+uY8sDzzyhMoFlziinmM1FzEjiq5VskHWMybu+a1zPOK5xPOO6xiVS9zy75OE//d71Mnc/+cjS19e4nudr1zXODb/55ZrW9b7vIbJBkAFghZOVqy0KuZzROuO4rjaONo7WnmMIxEODh4jrukkPPeN4xvGN4xrjGuPt8gI1BVJKVcPw+EmHLzjlM9WerqBYt3LNy1+47XqltDALwAR5N9Mm50eP/vapl16sxrHWuru76+5nlrzesTkfFPo7t3xwyvtHNTS8vH4NCCyiPP/Xf3qstXVzJY4U1aqPAmHm82b+6wWfOO2epx62hrqqpVP+Y8GCk08bN2LkkpeW3fTbu50giMRKWP3w4VMtszBDYAEy5qb77h7T3BxaISIlYBISPvukT3iZjIgIi/K8v6x99Zt33RHFMW3deioKy+WZUz9w1METrLU7OQ+liJm/duq8R154+sW1rwSNjbc/eO+0yVPOmH6Sjax29D7zoUkhnUUSL5YAXfTgvYjjoQoNIch4Tqa/q+ugseNu+PwlCuS7Ts2jZ7z7nv3DfU8+jKT0vLVbQqcd9+FjD3nv1+d89upfLvJzufWlvgWLvqtIM6ybzXowlXJp9sxTzjzhowC8XE6TcpQS373tocWwca2YKQAYbE89fuYIv0GRgojx/OXr1yx/efkOzspodHS2DGv55/GHusbZPhUTEYBjK4Fxrp9/0Ylfmh/Z2AtyX7zpuinjJk4eOdpaq/Wei6Jmt0EnZhYRXasQExEZYwB4xoGwkBDg5/KkiLcSZ5tVzr988KRLZs+tc/zVmza+snmTY4zRWkeCIC9Zgggn5XARKwLhS392a30m6I8jGFPp7ITWUMQcgSns6QsJYH5tw/qTvnIeICs7W20cDXR1gQCtUBseAQSlQc7Fi34wLF/XMdArbMM4VMY4dY2KapVmIoJRkXHbe/te2/RGR6Wkkoo+QQuIyDFeQmDahMnXzP/CF265ThfrugZ6zr3+qke/dXPGmFBiEigGJ6VurXaNUoRd3s4oLDvV2UtR1DPYXwmrtzyw+Nt3/dgvFiQWVlDJyQ8IBCvWd/3hDU39vb3dfX2VMEIUDlUhAaUABa09x/UdxzeuZxzf9djGxpjA9Zvq6zOuZxzjGddV2mijjDZaK61L5bIVUQTXOK5xrI0jkaQ2EHEcR1E1isIoqkRhR09Xf6Xiaqcah9UoqkZhJY4qUVWsBRhWwAytINDKcX23AoYmY9FcqBs/amydlylmc1k/25zN+/n8wsV3dg70ZVxvsKfr87PP+ObccwLH3ekEQ+0RKAMQeXzZc8vWv9ba1bGpva21p7Ozv69jsK9UrVTZiiYdi7BUORZrEUdI0kNSMI4hVV8oNNU1NOWLLXUNw4oNTYViYy7XWKyvzxcKQTbnBxk/k/P9wPV947iO0diXYqASxaGNKpVKqVoZqFQGK6We8mD3QF9nb19XX09Hf29bX3dbT1dXb2/fQH93aaA/rKBSRrkMEShAa5ADY3R93oB0jFhTGFYntIxsyRUbGhtbmlvGFpomjh77kfcdTXtc8hJbbfRDy55ZeMcNqG+EAEYnswobgy0iC1Iq4zfli8OLjWOGDR/T2DJ2xP4jm4eNaGjer6GpPsgVgsDVe11qk6F6G0SGjgbeUh2EauWQ5DQIgWMCx8DPvPk/VkUG+ge6y4OtPZ2tnR2bOtpfb920rqtt/ZbNm3o7u3p7Kr391sbQBsZRrruybcPK1nVYZRERervmzj595vuOZrZqx6LiLhbKrJTa0N111Pmnt1UGOIoQh1CmkM2Pam4Zv9+oQ0e/55BRY8ftN3pU07DGQp2723e4CpIgBtqOz9BpKGH7EybaGhbobR8Oy44fSYY2H7VJoq2zBQFBgxRAavcRxrLt6O/d0NGxpnXjyg2v/3Xda6s3rlvb0dpb6kNsoR3juhnHPP2dOyaNGMnCasezA7PLtpIs21H1DZ+aduKihxa//7Cjpow75J8OPnTimANGNg3zzS4WzcwitTMb2sqKiEgresu7hbcn2uljbbqI3mRzU1sNgqFt+tDDAFrplmJDS7HhyAMPTppG1m7sbF++bs3SV/+67LXVzyx//uQjp00aMZKtVbssxN0FJRESdFbK/ZXy2IbGnc4+RSShRkTY9UmEv3/VEkNJHgVIEO9gg2/0dGeUqs8VsDsAZnfzTazQGASNQWBZWJIipiKif4SXNNPQUyvbuy8LsDAJiLB/XX3NwmmvE3seCg5KkRYtBP7bfgDmXQVMICMAtFDt2RQQyf+xOs1uKt61v1LiyBOKCiD5RyQqQ5YkCgwQapFBye5NzOzO4LfNDO2zwPH37AGG4pzeCxrp44z7WCnQFGgKNAWaKgWaAk2BpkqBpkBToKlSoCnQFGgKNFUKNAWaAk2VAk2BpkBTpUBToCnQVCnQFGgKNAWaKgWaAk2BpkqBpkBToKlSoCnQFGiqRAaAtdZaO/Qdw1TvGGixWExeY5bieOciAPPmzWtubt72juNU70D/Cxy9lzsCRsW8AAAAAElFTkSuQmCC"};
 function logo(c,size=28){const ini=c.ticker.slice(0,2);
-  const img=c.logoid?`<img src="https://s3-symbol-logo.tradingview.com/${c.logoid}--big.svg" alt="" onload="this.classList.add('ok')" onerror="this.remove()">`:'';
+  const src=LOGO_OVERRIDE[c.ticker]||(c.logoid?`https://s3-symbol-logo.tradingview.com/${c.logoid}--big.svg`:null);
+  const img=src?`<img src="${src}" alt="" onload="this.classList.add('ok')" onerror="this.remove()">`:'';
   return `<span class="logo" style="--s:${size}px" aria-hidden="true">${ini}${img}</span>`;}
 function relBadge(v,b){if(v==null||b==null)return '';const d=v-b;return `<div><span class="rel ${d>=0?'up':'down'}" title="Sektör: ${pct(b)}">${d>=0?'▲':'▼'} ${pp(d)}</span></div>`}
 
@@ -362,6 +384,23 @@ function renderGroup(rows,bm){const D=state.data;
     <div class="row" data-t="${x.c.ticker}" title="${x.c.name}: ${money(x.mcap)}">${logo(x.c,22)}<div>${x.c.ticker}</div>
       <div class="track"><div class="fill" style="width:${x.mcap/mx*100}%"></div></div><div class="v">%${nf(1).format(x.mcap/tot*100)}</div></div>`).join('');
   $('barsHint').textContent=`Grup içindeki pay · toplam ${money(tot)}`;
+  // group comparison: BIST 100 + 7 companies, indexed to 100
+  const COC=['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#4a3aa7','#e34948'],COD=['#3987e5','#d95926','#199e70','#c98500','#d55181','#9085e9','#e66767'];
+  const dk=document.documentElement.dataset.theme==='dark'||(matchMedia('(prefers-color-scheme: dark)').matches&&document.documentElement.dataset.theme!=='light');
+  const gser=[{key:'XU100',name:'BIST 100',color:css('--muted'),h:sliceRange(conv(D.benchmarks.XU100.history),state.rangeGC),w:2.5},
+    ...rows.map((x,i)=>({key:x.c.ticker,name:x.c.ticker,color:(dk?COD:COC)[i%7],h:sliceRange(x.h,state.rangeGC),w:1.8}))]
+    .map(s=>{const b=s.h[0]?s.h[0][1]:1;return {...s,h:s.h.map(([d,v])=>[d,v/b*100])}});
+  const gvis=gser.filter(s=>!state.ghidden.has(s.key));
+  $('gcHint').textContent=`Dönem başı = 100 · ${state.cur==='USD'?'USD bazında':'TL bazında'} · çizgileri açıp kapatmak için tıklayın`;
+  const allOn=rows.every(x=>!state.ghidden.has(x.c.ticker));
+  $('gcLegend').innerHTML=gser.map(s=>`<button class="lg ${state.ghidden.has(s.key)?'off':''}" data-k="${s.key}" aria-pressed="${!state.ghidden.has(s.key)}"><i style="background:${s.color}"></i>${s.name}</button>`).join('')+
+    `<button class="lg-all" id="gcAll">${allOn?'Şirketleri gizle':'Tüm şirketleri göster'}</button>`;
+  $('gcLegend').querySelectorAll('.lg').forEach(b=>b.onclick=()=>{const k=b.dataset.k;state.ghidden.has(k)?state.ghidden.delete(k):state.ghidden.add(k);render()});
+  $('gcAll').onclick=()=>{allOn?rows.forEach(x=>state.ghidden.add(x.c.ticker)):rows.forEach(x=>state.ghidden.delete(x.c.ticker));render()};
+  lineChart($('gcChart'),gvis.length?gvis:gser.slice(0,1),{height:300,fmt:v=>nf(0).format(v),tipFmt:v=>`${nf(1).format(v)} (${pct(v-100)})`,endLabels:true});
+  const KK=['1D','1M','YTD','1Y'];
+  $('gcBody').innerHTML=gser.filter(s=>!state.ghidden.has(s.key)).map(s=>{const r=s.key==='XU100'?xr:rows.find(x=>x.c.ticker===s.key).r;
+    return `<tr><td><span style="display:inline-flex;align-items:center;gap:8px"><i style="width:12px;height:3px;border-radius:2px;background:${s.color};display:inline-block"></i>${s.key==='XU100'?'BIST 100':s.name+' · '+rows.find(x=>x.c.ticker===s.key).c.name}</span></td>${KK.map(k=>`<td class="${cls(r[k])}">${pct(r[k])}</td>`).join('')}</tr>`}).join('');
   // group chart
   let g,intra=false;
   if(state.rangeG==='1H'){const gi=groupIntraday();if(gi.length>1){g=conv(sliceWeek(gi));intra=true}else g=sliceRange(gh,'1H')}
@@ -396,9 +435,9 @@ function renderCompany(rows,bm){const D=state.data;const x=rows.find(r=>r.c.tick
         <div class="ch ${cls(chg)}">${chg>0?'+':chg<0?'−':''}${usd?'$'+nf(3).format(Math.abs(chg)):nf(2).format(Math.abs(chg))+' TL'} (${pct(x.r['1D'],2)}) bugün</div></div>
     </div>
     <div class="stats num">
-      <div class="stat"><div class="lab">Piyasa değeri</div><div class="v">${money(x.mcap)}</div><div class="s">grubun %${nf(1).format(x.mcap/rows.reduce((s,r)=>s+r.mcap,0)*100)}'i</div></div>
-      <div class="stat"><div class="lab">F/K</div><div class="v">${peText}</div><div class="s">sektör ${c.sector_pe?nf(1).format(c.sector_pe)+'x':'–'}</div></div>
-      <div class="stat"><div class="lab">PD/DD</div><div class="v">${pbText}</div><div class="s">sektör ${c.sector_pb?nf(1).format(c.sector_pb)+'x':'–'}</div></div>
+      <div class="stat"><div class="lab"><span class="hint-term" data-m="mcap">Piyasa değeri</span></div><div class="v">${money(x.mcap)}</div><div class="s">grubun %${nf(1).format(x.mcap/rows.reduce((s,r)=>s+r.mcap,0)*100)}'i</div></div>
+      <div class="stat"><div class="lab"><span class="hint-term" data-m="pe">F/K</span></div><div class="v">${peText}</div><div class="s">sektör ${c.sector_pe?nf(1).format(c.sector_pe)+'x':'–'}</div></div>
+      <div class="stat"><div class="lab"><span class="hint-term" data-m="pb">PD/DD</span></div><div class="v">${pbText}</div><div class="s">sektör ${c.sector_pb?nf(1).format(c.sector_pb)+'x':'–'}</div></div>
       <div class="stat"><div class="lab">52 haftalık aralık (kapanış)</div><div class="range52"><i style="left:${pos}%"></i></div>
         <div class="s">${money(lo,false)} – ${money(hi,false)}</div></div>
       <div class="stat"><div class="lab">Endeksteki büyüklük sırası</div><div class="v">${c.index_rank?c.index_rank+' / '+(bmk.members?bmk.members.length:'?'):'–'}</div><div class="s">${c.bench} içinde, piyasa değerine göre</div></div>
@@ -519,6 +558,24 @@ function seg(id,key,opts){const el=$(id);
 document.querySelector('[aria-label="Para birimi"]').onclick=e=>{const b=e.target.closest('button');if(!b)return;state.cur=b.dataset.cur;
   document.querySelectorAll('[data-cur]').forEach(x=>x.setAttribute('aria-pressed',x===b));render()};
 document.addEventListener('click',e=>{const i=$('info');if(i&&!i.contains(e.target)){i.classList.remove('open')}});
+/* ---------- metric explainers ---------- */
+const TERMS={
+  pe:{t:'F/K · Fiyat / Kazanç',p:['Hisse fiyatının, hisse başına yıllık net kâra bölümü. <b>"Kârının kaç katına alınıyor"</b> demek.','<b>Yüksekse:</b> piyasa büyüme bekliyor ya da hisse pahalı. <b>Düşükse:</b> ucuz ya da piyasa kârın kalıcı olmadığını düşünüyor.','Zarar eden şirkette hesaplanamaz, "–" görünür. Tek başına değil, sektörle birlikte okunur.']},
+  spe:{t:'Sektör F/K',p:['Şirketin bağlı olduğu BIST sektör endeksindeki şirketlerin F/K\'sı, piyasa değeri ağırlıklı. Büyük şirketler daha çok etkiler.','Şirket F/K\'sı sektörün <b>altındaysa</b> emsallerine göre ucuz, <b>üstündeyse</b> pahalı fiyatlanıyor demektir.']},
+  pb:{t:'PD/DD · Piyasa Değeri / Defter Değeri',p:['Piyasa değerinin, bilançodaki özkaynağa bölümü. <b>"Varlıklarının kaç katına alınıyor"</b> demek.','<b>1\'in altı:</b> piyasa şirkete bilançodaki özkaynağından az değer biçiyor. <b>Yüksekse:</b> marka, büyüme gibi bilançoda görünmeyen değer fiyatlanıyor.','Perakende ve holding gibi sektörlerde doğal olarak farklı seviyelerde olur; sektörle kıyaslanır.']},
+  spb:{t:'Sektör PD/DD',p:['Sektör endeksindeki şirketlerin PD/DD\'si, piyasa değeri ağırlıklı.','Şirket değeri sektörün <b>altındaysa</b> defter değerine göre daha ucuz, <b>üstündeyse</b> daha pahalı fiyatlanıyor.']},
+  mcap:{t:'Piyasa değeri',p:['Hisse fiyatı × toplam hisse adedi. Borsanın şirketin tamamına biçtiği fiyat.','Hisse adedi sabitken fiyatla birlikte hareket eder. USD görünümünde günün kuruyla çevrilir.']}};
+let termEl=null;
+function showTerm(el){const m=TERMS[el.dataset.m];if(!m)return;hideTerm();termEl=document.createElement('div');termEl.className='term-pop';termEl.setAttribute('role','tooltip');
+  termEl.innerHTML=`<h3>${m.t}</h3>${m.p.map(x=>`<p>${x}</p>`).join('')}`;document.body.appendChild(termEl);
+  const r=el.getBoundingClientRect(),w=termEl.offsetWidth,h=termEl.offsetHeight;
+  let left=Math.min(Math.max(8,r.left),innerWidth-w-8),top=r.bottom+8;if(top+h>innerHeight-8)top=r.top-h-8;
+  termEl.style.left=left+'px';termEl.style.top=top+'px';}
+function hideTerm(){if(termEl){termEl.remove();termEl=null}}
+document.addEventListener('pointerover',e=>{const t=e.target.closest('.hint-term');if(t)showTerm(t)});
+document.addEventListener('pointerout',e=>{const t=e.target.closest('.hint-term');if(t&&!t.contains(e.relatedTarget))hideTerm()});
+document.addEventListener('click',e=>{const t=e.target.closest('.hint-term');if(t){e.stopPropagation();termEl?hideTerm():showTerm(t)}else if(termEl&&!termEl.contains(e.target))hideTerm()},true);
+addEventListener('scroll',hideTerm,{passive:true});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){const i=$('info');i&&i.classList.remove('open')}});
 function route(){const h=decodeURIComponent(location.hash.slice(1));const [p,t]=h.split('/');
   state.page=p==='sirket'?'sirket':'grup';
@@ -537,6 +594,7 @@ fetch('data.json?t='+Date.now()).then(r=>r.json()).then(D=>{
   seg('rangeG','rangeG',[['1H','1H'],['1M','1A'],['YTD','YB'],['1Y','1Y']]);
   seg('rangeP','rangeP',[['1H','1H'],['1M','1A'],['YTD','YB'],['1Y','1Y']]);
   seg('rangeC','rangeC',[['1M','1A'],['YTD','YB'],['1Y','1Y']]);
+  seg('rangeGC','rangeGC',[['1M','1A'],['YTD','YB'],['1Y','1Y']]);
   const up=new Date(D.updated_at),lastBar=D.companies[0].history.at(-1)[0];
   $('updated').textContent=`Son güncelleme: ${up.toLocaleString('tr-TR',{timeZone:'Europe/Istanbul',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})} · son işlem günü ${fmtDateTR(lastBar)}`;
   $('srcline').textContent='Veriler ~15 dk gecikmeli · borsa açıkken saatte bir güncellenir';
