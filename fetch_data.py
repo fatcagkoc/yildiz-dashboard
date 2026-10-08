@@ -108,6 +108,18 @@ BENCHMARKS = {
 EXCLUDE_BANKS_FOR = {"GOZDE"}
 INTRADAY_BARS = 70  # hourly bars, ~1.5 trading weeks
 
+# Listed direct competitors per company (confirmed by Fatih, 2026-10-08).
+PEERS = {
+    "ULKER": ["KRVGD", "ELITE", "DURKN", "OYLUM"],
+    "BESLR": ["TUKAS", "TATGD", "PETUN", "DARDL", "FRIGO", "PENGD"],
+    "SOKM": ["BIMAS", "MGROS", "CRFSA", "GMTAS", "MOPAS", "KIMMR"],
+    "BIZIM": ["MGROS", "GMTAS"],
+    "GOZDE": ["ISGSY", "BULGS", "HDFGS", "VERTU"],
+    "PENTA": ["INDES", "INGRM", "DGATE", "ARENA", "DESPC"],
+    "MAKTK": ["MEKAG", "IMASM"],
+}
+PEER_CAP = 0.40  # max weight of one company in a peer index (BIST-style cap)
+
 
 def log(*a):
     print(*a, flush=True)
@@ -154,6 +166,55 @@ def weighted(rows, key):
     if len(pts) < 3:
         return None
     return round(sum(m for m, _ in pts) / sum(m / x for m, x in pts), 2)
+
+
+def capped_weights(mcaps, cap):
+    """Market-cap weights with a per-name cap; excess is spread pro rata over the rest."""
+    tot = sum(mcaps.values())
+    if tot <= 0:
+        return {}
+    w = {k: v / tot for k, v in mcaps.items()}
+    cap = max(cap, 1.0 / len(w))
+    for _ in range(20):
+        over = [k for k, v in w.items() if v > cap + 1e-9]
+        if not over:
+            break
+        excess = sum(w[k] - cap for k in over)
+        for k in over:
+            w[k] = cap
+        rest = [k for k in w if k not in over]
+        rest_sum = sum(w[k] for k in rest)
+        if rest_sum <= 0:
+            break
+        for k in rest:
+            w[k] += excess * w[k] / rest_sum
+    return w
+
+
+def peer_index(peers, dates, cap):
+    """Chain-linked, daily-rebalanced, cap-weighted price index (start = 100).
+
+    peers: {ticker: {"shares": n, "history": [[date, close], ...]}}
+    dates: trading-day calendar (list of ISO dates)
+    Returns (history [[date, value]], latest weights {ticker: w}).
+    """
+    px = {t: dict(p["history"]) for t, p in peers.items() if p.get("history") and p.get("shares")}
+    if not px:
+        return [], {}
+    start = min(min(h) for h in px.values())
+    cal = [d for d in dates if d >= start]
+    out, val, last_w, prev = [], 100.0, {}, None
+    for d in cal:
+        if prev is not None:
+            mc = {t: peers[t]["shares"] * px[t][prev] for t in px if prev in px[t] and d in px[t]}
+            w = capped_weights(mc, cap)
+            if w:
+                r = sum(w[t] * (px[t][d] / px[t][prev] - 1) for t in w)
+                val *= 1 + r
+                last_w = w
+        out.append([d, round(val, 4)])
+        prev = d
+    return out, last_w
 
 
 def main():
@@ -239,6 +300,37 @@ def main():
             if code in prev_bm:
                 benchmarks[code] = prev_bm[code]
 
+    # ---- Peers (direct listed competitors) ----
+    peer_tickers = sorted({t for lst in PEERS.values() for t in lst})
+    prev_peers = prev.get("peers", {})
+    peers = {}
+    try:
+        pcols = ["name", "description", "close", "market_cap_basic", "price_earnings_ttm", "price_book_fq",
+                 "total_shares_outstanding_fundamental", "logoid"]
+        rows = retry(tv_scan, {"symbols": {"tickers": [f"BIST:{t}" for t in peer_tickers]}, "columns": pcols})
+        for r in rows:
+            d = dict(zip(pcols, r["d"]))
+            peers[d["name"]] = {"name": d["description"], "shares": d["total_shares_outstanding_fundamental"],
+                                "mcap": d["market_cap_basic"],
+                                "pe": d["price_earnings_ttm"] if (d["price_earnings_ttm"] or 0) > 0 else None,
+                                "pb": d["price_book_fq"], "logoid": d["logoid"]}
+        log("scanner: peers ok", len(peers), "of", len(peer_tickers))
+    except Exception as e:  # noqa: BLE001
+        warnings.append(f"peer fundamentals: {e}")
+        log("peer scanner FAILED", e)
+    for t in peer_tickers:
+        p = peers.setdefault(t, {k: prev_peers.get(t, {}).get(k) for k in ("name", "shares", "mcap", "pe", "pb", "logoid")})
+        try:
+            bars = retry(fetch_history, f"BIST:{t}", BARS)
+            p["history"] = series(bars)
+        except Exception as e:  # noqa: BLE001
+            warnings.append(f"peer {t} history: {e}")
+            p["history"] = prev_peers.get(t, {}).get("history", [])
+        if p.get("shares") and p.get("history"):
+            p["mcap"] = p["shares"] * p["history"][-1][1]
+        log("peer", t, len(p["history"]), p.get("mcap"))
+    calendar = [d for d, _ in benchmarks["XU100"]["history"]] if "XU100" in benchmarks else []
+
     # ---- Companies ----
     companies = []
     for c in COMPANIES:
@@ -305,6 +397,16 @@ def main():
         else:
             for k in ("peer_label", "peer_count", "sector_pe", "sector_pb", "index_rank"):
                 item[k] = old.get(k)
+        # peer index (XRAKIP)
+        plist = PEERS.get(t, [])
+        pdata = {p: peers[p] for p in plist if p in peers and peers[p].get("history")}
+        hist, w = peer_index(pdata, calendar, PEER_CAP)
+        item["peer_index"] = {
+            "code": "XRAKIP", "name": f"{c['name']} rakip endeksi", "cap": PEER_CAP,
+            "history": hist,
+            "members": [[p, peers[p]["name"], peers[p].get("mcap"), round(w.get(p, 0), 4)] for p in plist if p in peers],
+        } if hist else old.get("peer_index")
+        item["peers"] = plist
         companies.append(item)
         log("company", t, len(item["history"]), item.get("mcap"), item.get("pe"), item.get("sector_pe"))
 
@@ -318,6 +420,7 @@ def main():
         "fx": fx,
         "benchmarks": benchmarks,
         "companies": companies,
+        "peers": {t: {k: v for k, v in p.items()} for t, p in peers.items()},
         "warnings": warnings,
     }
     with open(OUT, "w", encoding="utf-8") as f:
