@@ -13,7 +13,7 @@
   --bg:#f3f4f6;--surface:#ffffff;--surface2:#f8f9fb;--line:#e3e6eb;--grid:#eef0f3;
   --text:#0d1420;--text2:#4a5463;--muted:#7b8494;
   --hdr:#0c1a2e;--hdr2:#13243d;--hdr-line:#22365a;--hdr-text:#ffffff;--hdr-muted:#9fb0c8;
-  --accent:#2a78d6;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;
+  --accent:#2a78d6;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#4a3aa7;
   --up:#0b7a35;--down:#c4302b;--up-bg:#e5f4ea;--down-bg:#fbe9e8;
   --chip:#eceff3;--shadow:0 1px 2px rgba(13,20,32,.05),0 2px 8px rgba(13,20,32,.04);
 }
@@ -22,7 +22,7 @@
   --bg:#0b0f16;--surface:#131a24;--surface2:#18202c;--line:#243042;--grid:#1c2532;
   --text:#f2f5f9;--text2:#b5bfcc;--muted:#7f8b9b;
   --hdr:#0a1422;--hdr2:#101d30;--hdr-line:#1f3150;
-  --accent:#3987e5;--s1:#3987e5;--s2:#d95926;--s3:#199e70;
+  --accent:#3987e5;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#9085e9;
   --up:#3ccf6e;--down:#f07068;--up-bg:#123321;--down-bg:#3a1a19;
   --chip:#1c2532;--shadow:none;
 }}
@@ -31,7 +31,7 @@
   --bg:#0b0f16;--surface:#131a24;--surface2:#18202c;--line:#243042;--grid:#1c2532;
   --text:#f2f5f9;--text2:#b5bfcc;--muted:#7f8b9b;
   --hdr:#0a1422;--hdr2:#101d30;--hdr-line:#1f3150;
-  --accent:#3987e5;--s1:#3987e5;--s2:#d95926;--s3:#199e70;
+  --accent:#3987e5;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#9085e9;
   --up:#3ccf6e;--down:#f07068;--up-bg:#123321;--down-bg:#3a1a19;
   --chip:#1c2532;--shadow:none;
 }
@@ -106,6 +106,21 @@ tbody.click tr:hover td{background:var(--surface2)}
 .legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:0 0 10px;font-size:12.5px;color:var(--text2)}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{width:14px;height:3px;border-radius:2px;display:inline-block}
+.lg{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--surface);color:var(--text);font:inherit;font-size:12.5px;font-weight:500;padding:4px 10px;border-radius:999px;cursor:pointer}
+.lg.off{color:var(--muted);background:transparent}
+.lg.off i{opacity:.35}
+.lg.peer{font-weight:600;letter-spacing:.01em}
+.lg-sep{width:1px;height:18px;background:var(--line);margin:0 2px}
+.lg-all{border:0;background:var(--chip);color:var(--text2);font:inherit;font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px;cursor:pointer}
+.pop ol.one{grid-template-columns:1fr}
+.pop li u{text-decoration:none;color:var(--text2);margin-left:auto;font-size:11.5px;white-space:nowrap}
+.bars.mbars .row{grid-template-columns:64px 1fr 72px}
+.bars.mbars .track{position:relative;height:18px;display:flex;align-items:center}
+.bars.mbars .fill{background:var(--muted);opacity:.55;border-radius:0 4px 4px 0;height:100%;flex:none}
+.bars.mbars .row.me .fill{background:var(--s1);opacity:1}
+.mbars .row.me .co{font-weight:700;color:var(--s1)}
+.mbars .lbl{margin-left:8px;font-size:12px;color:var(--text2);white-space:nowrap}
+.mbars .v{font-weight:600}
 .tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 6px 18px rgba(0,0,0,.14);white-space:nowrap;opacity:0;transition:opacity .1s;z-index:3}
 .tip b{font-weight:600}.tip .r{display:flex;justify-content:space-between;gap:14px;color:var(--text2)}.tip .r em{font-style:normal;color:var(--text);font-weight:600}
 .bars .row{display:grid;grid-template-columns:24px 58px 1fr 54px;gap:8px;align-items:center;padding:5px 0;font-size:13px;cursor:pointer}
@@ -251,17 +266,24 @@ tbody.click tr:hover td{background:var(--surface2)}
         </table>
       </div>
     </div>
+
+    <div class="card mt">
+      <h2>Piyasa değeri: şirket ve rakipleri</h2>
+      <p class="hint" id="mcapHint"></p>
+      <div class="bars mbars num" id="mcapBars"></div>
+    </div>
   </section>
 
   <div class="notes">
     <p><b>Kaynaklar:</b> Fiyat, endeks geçmişi, endeks bileşenleri, piyasa değeri, F/K ve PD/DD: TradingView. USD/TRY: TradingView ve Yahoo Finance. Veriler yaklaşık 15 dakika gecikmelidir; borsa açıkken hafta içi saatte bir güncellenir.</p>
     <p><b>Sektör endeksleri:</b> ULKER, BESLR → BIST Gıda İçecek (XGIDA) · SOKM, BIZIM → BIST Ticaret (XTCRT) · GOZDE → BIST Mali (XUMAL) · PENTA → BIST Teknoloji (XUTEK) · MAKTK → BIST Metal Eşya Makina (XMESY). Genel karşılaştırma: BIST 100. GOZDE'nin değerleme karşılaştırmasında bankalar hariç tutulur.</p>
+    <p><b>Rakip endeksi (XRAKIP):</b> Her şirket için borsadaki doğrudan rakiplerinden hesaplanan, piyasa değeri ağırlıklı fiyat endeksi. Tek şirketin ağırlığı en fazla %40 ile sınırlıdır, ağırlıklar her gün yeniden hesaplanır. Resmi bir BIST endeksi değildir; rakip listeleri Yıldız Holding strateji ekibince belirlenmiştir.</p>
     <p><b>Fiyatlar</b> bedelsiz sermaye artırımı ve bölünmelere göre düzeltilmiştir. <b>USD görünümü:</b> her günün fiyatı o günün USD/TRY kuruyla çevrilir. Bilgi amaçlıdır, yatırım tavsiyesi değildir.</p>
   </div>
 </main>
 
 <script>
-const state={page:'grup',cur:'TRY',sel:'ULKER',rangeG:'1Y',rangeP:'1Y',rangeC:'1Y',data:null};
+const state={page:'grup',cur:'TRY',sel:'ULKER',rangeG:'1Y',rangeP:'1Y',rangeC:'1Y',data:null,hidden:new Set(),visFor:null};
 const nf=(d)=>new Intl.NumberFormat('tr-TR',{minimumFractionDigits:d,maximumFractionDigits:d});
 const css=(v)=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const $=(id)=>document.getElementById(id);
@@ -386,33 +408,65 @@ function renderCompany(rows,bm){const D=state.data;const x=rows.find(r=>r.c.tick
   lineChart($('pxChart'),[{name:c.ticker,color:css('--s1'),h:ph}],{height:280,area:true,intra,fmt:v=>usd?'$'+nf(v<10?2:1).format(v):nf(v<100?2:0).format(v),tipFmt:v=>money(v,false)});
   const pch=(ph.at(-1)[1]/ph[0][1]-1)*100,phi=Math.max(...ph.map(r=>r[1])),plo=Math.min(...ph.map(r=>r[1]));
   $('pxHint').innerHTML=`${intra?'Saatlik':'Günlük kapanış'} · ${usd?'USD':'TL'} · seçili dönemde <span class="${cls(pch)}">${pct(pch)}</span> · en yüksek ${money(phi,false)}, en düşük ${money(plo,false)}`;
-  // comparison
-  const ser=[{name:c.ticker,color:css('--s1'),h:sliceRange(x.h,state.rangeC)},
-    {name:`${bmk.name} (${c.bench})`,color:css('--s2'),h:sliceRange(conv(bmk.history),state.rangeC)},
-    {name:'BIST 100',color:css('--s3'),h:sliceRange(conv(D.benchmarks.XU100.history),state.rangeC)}]
-    .map(s=>{const b=s.h[0][1];return {...s,h:s.h.map(([d,v])=>[d,v/b*100])}});
-  $('cmpTitle').textContent=`${c.name} vs ${bmk.name}`;
-  $('cmpHint').textContent=`Dönem başı = 100 · ${usd?'USD bazında':'TL bazında'}`;
-  const mem=bmk.members||[];
-  $('infoWrap').innerHTML=`<div class="info" id="info"><button class="info-btn" aria-expanded="false" aria-controls="pop">
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6.5"/><path d="M8 7.2v4M8 4.8v.1" stroke-linecap="round"/></svg>
-    ${c.bench} endeksindeki şirketler · ${mem.length}</button>
+  // comparison: company, sector index, peer index, BIST 100 (+ optional peer lines)
+  const pidx=c.peer_index, peerList=(c.peers||[]).filter(p=>D.peers&&D.peers[p]&&D.peers[p].history&&D.peers[p].history.length>1);
+  if(state.visFor!==c.ticker){state.visFor=c.ticker;state.hidden=new Set(peerList);}
+  const PEERC=['#eda100','#e87ba4','#008300','#e34948','#0a8f9c','#a0522d'];
+  const PEERD=['#c98500','#d55181','#2eaa2e','#e66767','#2bb3c0','#c8794f'];
+  const dark=matchMedia('(prefers-color-scheme: dark)').matches&&document.documentElement.dataset.theme!=='light'||document.documentElement.dataset.theme==='dark';
+  const pc=i=>(dark?PEERD:PEERC)[i%6];
+  const norm=s=>{const b=s.h[0]?s.h[0][1]:1;return {...s,h:s.h.map(([d,v])=>[d,v/b*100])}};
+  const base=[
+    {key:c.ticker,name:c.ticker,color:css('--s1'),h:sliceRange(x.h,state.rangeC),w:2},
+    {key:c.bench,name:`${bmk.name} (${c.bench})`,color:css('--s2'),h:sliceRange(conv(bmk.history),state.rangeC),w:2},
+    ...(pidx&&pidx.history.length>1?[{key:'XRAKIP',name:`Rakip endeksi (XRAKIP)`,color:css('--s4'),h:sliceRange(conv(pidx.history),state.rangeC),w:2}]:[]),
+    {key:'XU100',name:'BIST 100',color:css('--s3'),h:sliceRange(conv(D.benchmarks.XU100.history),state.rangeC),w:2}];
+  const peerSer=peerList.map((p,i)=>({key:p,name:p,color:pc(i),h:sliceRange(conv(D.peers[p].history),state.rangeC),w:1.5,dash:'4 3',peer:true}));
+  const all=[...base,...peerSer].map(norm);
+  const vis=all.filter(s=>!state.hidden.has(s.key));
+  $('cmpTitle').textContent=`${c.name} vs sektör ve rakipler`;
+  $('cmpHint').textContent=`Dönem başı = 100 · ${usd?'USD bazında':'TL bazında'} · çizgileri açıp kapatmak için tıklayın`;
+  const mem=bmk.members||[],pm=pidx?pidx.members:[];
+  const fxNow=usd?(fxAt(x.h.at(-1)[0].slice(0,10))||1):1;
+  const popIcon=`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6.5"/><path d="M8 7.2v4M8 4.8v.1" stroke-linecap="round"/></svg>`;
+  $('infoWrap').innerHTML=`<div class="info" id="info"><button class="info-btn" aria-expanded="false" aria-controls="pop">${popIcon}${c.bench} endeksindeki şirketler · ${mem.length}</button>
     <div class="pop" id="pop" role="dialog" aria-label="${bmk.name} bileşenleri"><h3>${bmk.name} (${c.bench})</h3>
       <p>${mem.length} şirket · piyasa değerine göre sıralı · ${c.ticker} vurgulu</p>
-      <ol>${mem.map((m,i)=>`<li class="${m[0]===c.ticker?'me':''}" title="${m[1]} · ${money(m[2]/(usd?fxAt(x.h.at(-1)[0].slice(0,10))||1:1))}"><span>${i+1}</span><b>${m[0]}</b><em>${m[1]}</em></li>`).join('')}</ol></div></div>`;
-  const info=$('info'),btn=info.querySelector('button');
-  btn.onclick=e=>{e.stopPropagation();const o=info.classList.toggle('open');btn.setAttribute('aria-expanded',o)};
-  $('cmpLegend').innerHTML=ser.map(s=>`<span><i style="background:${s.color}"></i>${s.name}</span>`).join('');
-  lineChart($('cmpChart'),ser,{height:260,fmt:v=>nf(0).format(v),tipFmt:v=>`${nf(1).format(v)} (${pct(v-100)})`});
-  const K=['1D','1M','YTD','1Y'],br=bm[c.bench],xr=bm.XU100;
-  const line=(lab,r,color)=>`<tr><td><span style="display:inline-flex;align-items:center;gap:8px"><i style="width:12px;height:3px;border-radius:2px;background:${color};display:inline-block"></i>${lab}</span></td>${K.map(k=>`<td class="${cls(r[k])}">${pct(r[k])}</td>`).join('')}</tr>`;
-  $('cmpBody').innerHTML=line(c.ticker,x.r,css('--s1'))+line(`${bmk.name}`,br,css('--s2'))+line('BIST 100',xr,css('--s3'))+
-    `<tr><td style="font-weight:600">Fark (sektöre göre)</td>${K.map(k=>`<td>${relBadge(x.r[k],br[k]).replace(/<\/?div>/g,'')}</td>`).join('')}</tr>`;
+      <ol>${mem.map((m,i)=>`<li class="${m[0]===c.ticker?'me':''}" title="${m[1]} · ${money(m[2]/fxNow)}"><span>${i+1}</span><b>${m[0]}</b><em>${m[1]}</em></li>`).join('')}</ol></div></div>`+
+    (pidx?`<div class="info" id="info2"><button class="info-btn" aria-expanded="false" aria-controls="pop2">${popIcon}Rakip endeksi (XRAKIP) · ${pm.length} şirket</button>
+    <div class="pop" id="pop2" role="dialog" aria-label="Rakip endeksi bileşenleri"><h3>${pidx.name}</h3>
+      <p>Piyasa değeri ağırlıklı, tek şirket en fazla %${Math.round(pidx.cap*100)} · her gün yeniden dengelenir · güncel ağırlıklar</p>
+      <ol class="one">${pm.map((m,i)=>`<li title="${m[1]}"><span>${i+1}</span><b>${m[0]}</b><em>${m[1]}</em><u class="num">${money(m[2]/fxNow)} · %${nf(1).format(m[3]*100)}</u></li>`).join('')}</ol></div></div>`:'');
+  document.querySelectorAll('#infoWrap .info').forEach(info=>{const btn=info.querySelector('button');
+    btn.onclick=e=>{e.stopPropagation();document.querySelectorAll('#infoWrap .info').forEach(o=>o!==info&&o.classList.remove('open'));const o=info.classList.toggle('open');btn.setAttribute('aria-expanded',o)}});
+  // legend as toggles
+  const chip=s=>`<button class="lg ${state.hidden.has(s.key)?'off':''} ${s.peer?'peer':''}" data-k="${s.key}" aria-pressed="${!state.hidden.has(s.key)}" title="${s.peer?D.peers[s.key].name:s.name}"><i style="background:${s.color}${s.dash?';background:repeating-linear-gradient(90deg,'+s.color+' 0 4px,transparent 4px 7px)':''}"></i>${s.name}</button>`;
+  const allPeersOn=peerList.every(p=>!state.hidden.has(p));
+  $('cmpLegend').innerHTML=all.filter(s=>!s.peer).map(chip).join('')+(peerList.length?`<span class="lg-sep"></span>`+peerSer.map(chip).join('')+
+    `<button class="lg-all" id="lgAll">${allPeersOn?'Rakipleri gizle':'Tüm rakipleri göster'}</button>`:'');
+  $('cmpLegend').querySelectorAll('.lg').forEach(b=>b.onclick=()=>{const k=b.dataset.k;if(k===c.ticker)return;state.hidden.has(k)?state.hidden.delete(k):state.hidden.add(k);render()});
+  const la=$('lgAll');if(la)la.onclick=()=>{allPeersOn?peerList.forEach(p=>state.hidden.add(p)):peerList.forEach(p=>state.hidden.delete(p));render()};
+  lineChart($('cmpChart'),vis,{height:280,fmt:v=>nf(0).format(v),tipFmt:v=>`${nf(1).format(v)} (${pct(v-100)})`,endLabels:true});
+  // returns table
+  const K=['1D','1M','YTD','1Y'],br=bm[c.bench],xr=bm.XU100,pr=pidx?returns(conv(pidx.history)):null;
+  const line=(lab,r,color,dash)=>`<tr><td><span style="display:inline-flex;align-items:center;gap:8px"><i style="width:12px;height:3px;border-radius:2px;background:${color};display:inline-block${dash?';background:repeating-linear-gradient(90deg,'+color+' 0 3px,transparent 3px 5px)':''}"></i>${lab}</span></td>${K.map(k=>`<td class="${cls(r[k])}">${pct(r[k])}</td>`).join('')}</tr>`;
+  const diff=(lab,r)=>`<tr><td style="font-weight:600">${lab}</td>${K.map(k=>`<td>${relBadge(x.r[k],r&&r[k]).replace(/<\/?div>/g,'')||'–'}</td>`).join('')}</tr>`;
+  $('cmpBody').innerHTML=line(c.ticker,x.r,css('--s1'))+line(bmk.name,br,css('--s2'))+(pr?line('Rakip endeksi (XRAKIP)',pr,css('--s4')):'')+line('BIST 100',xr,css('--s3'))+
+    peerSer.filter(s=>!state.hidden.has(s.key)).map((s,i)=>line(`${s.key} · ${D.peers[s.key].name}`,returns(conv(D.peers[s.key].history)),s.color,true)).join('')+
+    diff('Fark (sektöre göre)',br)+(pr?diff('Fark (rakiplere göre)',pr):'');
+  // peer market cap bars
+  const mrows=[{t:c.ticker,name:c.name,mcap:c.mcap,h:c.history,me:true},...peerList.map(p=>({t:p,name:D.peers[p].name,mcap:D.peers[p].mcap,h:D.peers[p].history}))]
+    .filter(r=>r.mcap).map(r=>({...r,mcap:r.mcap/fxNow,ytd:returns(conv(r.h))['YTD']})).sort((a,b)=>b.mcap-a.mcap);
+  const mmax=Math.max(...mrows.map(r=>r.mcap));
+  $('mcapHint').textContent=`${c.ticker} ve ${peerList.length} rakibi · güncel piyasa değeri (${usd?'USD':'TL'}) · sağda yılbaşından beri değişim`;
+  $('mcapBars').innerHTML=mrows.map(r=>`<div class="row ${r.me?'me':''}" title="${r.name}"><div class="co">${r.t}</div>
+    <div class="track"><div class="fill" style="width:${Math.max(r.mcap/mmax*82,0.6)}%"></div><span class="lbl">${money(r.mcap)}</span></div>
+    <div class="v ${cls(r.ytd)}">${pct(r.ytd)}</div></div>`).join('');
 }
 
 /* ---------- SVG line chart ---------- */
 function lineChart(el,series,o){
-  const W=Math.max(280,el.clientWidth),H=o.height,m={t:10,r:12,b:26,l:o.l||66};
+  const W=Math.max(280,el.clientWidth),H=o.height,m={t:10,r:o.endLabels?52:12,b:26,l:o.l||66};
   const all=series.flatMap(s=>s.h.map(r=>r[1]));let lo=Math.min(...all),hi=Math.max(...all);const pad=(hi-lo)*0.08||Math.abs(hi)*0.01||1;lo-=pad;hi+=pad;
   const keys=series[0].h.map(r=>r[0]);const idx=new Map(keys.map((k,i)=>[k,i]));
   const t0=Date.parse(keys[0]),t1=Date.parse(keys.at(-1));
@@ -430,7 +484,12 @@ function lineChart(el,series,o){
   labs.forEach(([k,l],i)=>{if(i%step)return;const x=X(k);if(x<m.l+14&&i===0&&labs.length>2&&!o.intra)return;s+=`<text x="${Math.min(x,W-m.r-10)}" y="${H-6}" font-size="11" text-anchor="middle" fill="${css('--muted')}">${l}</text>`});
   for(const se of series){const p=se.h.filter(r=>idx.has(r[0])||!o.intra).map(([k,v],i)=>`${i?'L':'M'}${X(k).toFixed(1)},${Y(v).toFixed(1)}`).join('');
     if(o.area){const f=se.h[0][0],l=se.h.at(-1)[0];s+=`<path d="${p}L${X(l)},${H-m.b}L${X(f)},${H-m.b}Z" fill="${se.color}" opacity=".09"/>`}
-    s+=`<path d="${p}" fill="none" stroke="${se.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;}
+    s+=`<path d="${p}" fill="none" stroke="${se.color}" stroke-width="${se.w||2}"${se.dash?` stroke-dasharray="${se.dash}"`:''} stroke-linejoin="round" stroke-linecap="round"/>`;}
+  if(o.endLabels){ // short labels at the right end, nudged apart so they don't overlap
+    const ends=series.map(se=>({y:Y(se.h.at(-1)[1]),t:se.key||se.name,c:se.color})).sort((a,b)=>a.y-b.y);
+    for(let i=1;i<ends.length;i++)if(ends[i].y-ends[i-1].y<12)ends[i].y=ends[i-1].y+12;
+    for(let i=ends.length-1;i>=0;i--){if(ends[i].y>H-m.b-2)ends[i].y=H-m.b-2;if(i<ends.length-1&&ends[i+1].y-ends[i].y<12)ends[i].y=ends[i+1].y-12}
+    for(const e of ends)s+=`<text x="${W-m.r+6}" y="${e.y+4}" font-size="10.5" font-weight="600" fill="${e.c}">${e.t.length>7?e.t.slice(0,7):e.t}</text>`;}
   s+=`<line class="xh" y1="${m.t}" y2="${H-m.b}" stroke="${css('--muted')}" stroke-dasharray="3 3" opacity="0"/>`;
   series.forEach((se,i)=>s+=`<circle class="dot${i}" r="4" fill="${se.color}" stroke="${css('--surface')}" stroke-width="2" opacity="0"/>`);
   s+=`<rect x="${m.l}" y="0" width="${W-m.l-m.r}" height="${H}" fill="transparent"/></svg><div class="tip"></div>`;
