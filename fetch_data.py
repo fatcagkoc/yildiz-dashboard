@@ -135,6 +135,11 @@ GLOBAL_INDICES = {"^GSPC": "S&P 500", "^SSMI": "SMI (İsviçre)", "^BFX": "BEL 2
 GLOBAL_FX = {"CHF": "CHFUSD=X", "EUR": "EURUSD=X"}
 GLOBAL_CAP = 0.25
 
+# NAV (net aktif değer) discount for investment trusts: NAV = balance-sheet equity (fair-value accounting).
+NAV_TICKERS = ["GOZDE", "ISGSY", "BULGS", "HDFGS", "VERTU"]
+# Seed values for history before TradingView's latest two periods (source noted in UI).
+NAV_SEED = {"GOZDE": {"2025-09-30": 28236000000}}  # Global Menkul analist notu, 30.09.2025 NAD
+
 
 def log(*a):
     print(*a, flush=True)
@@ -489,6 +494,30 @@ def main():
         warnings.append(f"global: {e}")
         log("global FAILED", e)
 
+    # ---- NAV discount (GSYO) ----
+    nav = prev.get("nav", {})
+    try:
+        ncols = ["name", "description", "market_cap_basic", "total_shares_outstanding_fundamental",
+                 "total_equity_fq", "fiscal_period_end_fq", "total_equity_fy", "fiscal_period_end_fy"]
+        rows = retry(tv_scan, {"symbols": {"tickers": [f"BIST:{t}" for t in NAV_TICKERS]}, "columns": ncols})
+        for r in rows:
+            d = dict(zip(ncols, r["d"]))
+            t = d["name"]
+            entry = nav.get(t, {})
+            logd = dict(entry.get("equity_log", {}))
+            for k, v in NAV_SEED.get(t, {}).items():
+                logd.setdefault(k, v)
+            for eq, ts in ((d["total_equity_fy"], d["fiscal_period_end_fy"]), (d["total_equity_fq"], d["fiscal_period_end_fq"])):
+                if eq and ts:
+                    logd[dt.datetime.fromtimestamp(ts, dt.timezone.utc).date().isoformat()] = eq
+            nav[t] = {"name": d["description"], "mcap": d["market_cap_basic"], "shares": d["total_shares_outstanding_fundamental"],
+                      "equity": d["total_equity_fq"], "equity_date": dt.datetime.fromtimestamp(d["fiscal_period_end_fq"], dt.timezone.utc).date().isoformat() if d["fiscal_period_end_fq"] else None,
+                      "equity_log": dict(sorted(logd.items()))}
+            log("nav", t, nav[t]["equity"], nav[t]["equity_date"], "disc %.0f%%" % ((1 - d["market_cap_basic"] / d["total_equity_fq"]) * 100) if d["total_equity_fq"] else "")
+    except Exception as e:  # noqa: BLE001
+        warnings.append(f"nav: {e}")
+        log("nav FAILED", e)
+
     ok = all(c["history"] for c in companies) and "XU100" in benchmarks and fx
     if not ok and prev:
         log("Too much missing data; keeping previous data.json")
@@ -501,6 +530,7 @@ def main():
         "companies": companies,
         "peers": {t: {k: v for k, v in p.items()} for t, p in peers.items()},
         "global": glob,
+        "nav": nav,
         "warnings": warnings,
     }
     with open(OUT, "w", encoding="utf-8") as f:
