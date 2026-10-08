@@ -120,6 +120,21 @@ PEERS = {
 }
 PEER_CAP = 0.40  # max weight of one company in a peer index (BIST-style cap)
 
+# Global peers for ULKER (home-market benchmark per company; prices via Yahoo, fundamentals via TradingView).
+GLOBAL_PEERS = [
+    {"t": "MDLZ", "name": "Mondelez", "yahoo": "MDLZ", "tv": ("america", "NASDAQ:MDLZ"), "ccy": "USD", "bench": "^GSPC", "country": "ABD"},
+    {"t": "HSY", "name": "Hershey", "yahoo": "HSY", "tv": ("america", "NYSE:HSY"), "ccy": "USD", "bench": "^GSPC", "country": "ABD"},
+    {"t": "GIS", "name": "General Mills", "yahoo": "GIS", "tv": ("america", "NYSE:GIS"), "ccy": "USD", "bench": "^GSPC", "country": "ABD"},
+    {"t": "CPB", "name": "Campbell's", "yahoo": "CPB", "tv": ("america", "NASDAQ:CPB"), "ccy": "USD", "bench": "^GSPC", "country": "ABD"},
+    {"t": "PEP", "name": "PepsiCo", "yahoo": "PEP", "tv": ("america", "NASDAQ:PEP"), "ccy": "USD", "bench": "^GSPC", "country": "ABD"},
+    {"t": "NESN", "name": "Nestlé", "yahoo": "NESN.SW", "tv": ("switzerland", "SIX:NESN"), "ccy": "CHF", "bench": "^SSMI", "country": "İsviçre"},
+    {"t": "LISN", "name": "Lindt & Sprüngli", "yahoo": "LISN.SW", "tv": ("switzerland", "SIX:LISN"), "ccy": "CHF", "bench": "^SSMI", "country": "İsviçre"},
+    {"t": "LOTB", "name": "Lotus Bakeries", "yahoo": "LOTB.BR", "tv": ("belgium", "EURONEXT:LOTB"), "ccy": "EUR", "bench": "^BFX", "country": "Belçika"},
+]
+GLOBAL_INDICES = {"^GSPC": "S&P 500", "^SSMI": "SMI (İsviçre)", "^BFX": "BEL 20 (Belçika)", "XLP": "S&P 500 Tüketim Malları (XLP)"}
+GLOBAL_FX = {"CHF": "CHFUSD=X", "EUR": "EURUSD=X"}
+GLOBAL_CAP = 0.25
+
 
 def log(*a):
     print(*a, flush=True)
@@ -154,8 +169,8 @@ def yahoo_chart(symbol, rng="2y"):
     return bars, res["meta"]
 
 
-def tv_scan(payload):
-    r = requests.post("https://scanner.tradingview.com/turkey/scan", json=payload, headers=UA, timeout=30)
+def tv_scan(payload, market="turkey"):
+    r = requests.post(f"https://scanner.tradingview.com/{market}/scan", json=payload, headers=UA, timeout=30)
     r.raise_for_status()
     return r.json()["data"]
 
@@ -228,7 +243,7 @@ def main():
 
     # ---- Fundamentals (TradingView scanner) ----
     cols = ["name", "close", "market_cap_basic", "price_earnings_ttm", "price_book_fq",
-            "total_shares_outstanding_fundamental", "sector", "industry", "logoid"]
+            "total_shares_outstanding_fundamental", "sector", "industry", "logoid", "enterprise_value_ebitda_ttm"]
     fund = {}
     try:
         rows = retry(tv_scan, {"symbols": {"tickers": [f"BIST:{c['ticker']}" for c in COMPANIES]}, "columns": cols})
@@ -362,6 +377,7 @@ def main():
                 "tv_sector": f["sector"],
                 "tv_industry": f["industry"],
                 "logoid": f["logoid"],
+                "ev_ebitda": f["enterprise_value_ebitda_ttm"],
             })
         else:
             for k in ("shares", "mcap", "pe", "pb", "tv_sector", "tv_industry", "logoid"):
@@ -410,6 +426,69 @@ def main():
         companies.append(item)
         log("company", t, len(item["history"]), item.get("mcap"), item.get("pe"), item.get("sector_pe"))
 
+    # ---- Global benchmark (for ULKER) ----
+    glob = prev.get("global", {})
+    try:
+        gfx = {"USD": None}
+        for ccy, sym in GLOBAL_FX.items():
+            bars, meta = retry(yahoo_chart, sym)
+            gfx[ccy] = {"last": round(meta["regularMarketPrice"], 5), "history": series(bars)}
+        gidx = {}
+        for code, name in GLOBAL_INDICES.items():
+            bars, meta = retry(yahoo_chart, code)
+            gidx[code] = {"name": name, "ccy": meta.get("currency"), "history": series(bars)[-BARS:]}
+        gpeers = {}
+        for mk in {p["tv"][0] for p in GLOBAL_PEERS}:
+            cols = ["name", "description", "market_cap_basic", "price_earnings_ttm", "price_book_fq",
+                    "enterprise_value_ebitda_ttm", "logoid"]
+            data = retry(tv_scan, {"symbols": {"tickers": [p["tv"][1] for p in GLOBAL_PEERS if p["tv"][0] == mk]},
+                                   "columns": cols}, market=mk)
+            for r in data:
+                d = dict(zip(cols, r["d"]))
+                gpeers[d["name"]] = {"mcap_local": d["market_cap_basic"],
+                                     "pe": d["price_earnings_ttm"] if (d["price_earnings_ttm"] or 0) > 0 else None,
+                                     "pb": d["price_book_fq"], "ev_ebitda": d["enterprise_value_ebitda_ttm"], "logoid": d["logoid"]}
+        def to_usd(hist, ccy):
+            if ccy == "USD":
+                return hist
+            fxh = dict(gfx[ccy]["history"])
+            keys = sorted(fxh)
+            out = []
+            for d, v in hist:
+                # last available FX rate on or before d
+                lo, hi, k = 0, len(keys) - 1, None
+                while lo <= hi:
+                    m = (lo + hi) // 2
+                    if keys[m] <= d:
+                        k = keys[m]; lo = m + 1
+                    else:
+                        hi = m - 1
+                if k:
+                    out.append([d, round(v * fxh[k], 4)])
+            return out
+        peers_out = []
+        for p in GLOBAL_PEERS:
+            bars, meta = retry(yahoo_chart, p["yahoo"])
+            hist = series(bars)[-BARS:]
+            f = gpeers.get(p["t"], {})
+            fxl = 1.0 if p["ccy"] == "USD" else gfx[p["ccy"]]["last"]
+            mcap_local = f.get("mcap_local")
+            peers_out.append({**{k: p[k] for k in ("t", "name", "ccy", "bench", "country")},
+                              "history": hist, "history_usd": to_usd(hist, p["ccy"]),
+                              "shares": (mcap_local / hist[-1][1]) if mcap_local and hist else None,
+                              "mcap_usd": (mcap_local * fxl) if mcap_local else None,
+                              "pe": f.get("pe"), "pb": f.get("pb"), "ev_ebitda": f.get("ev_ebitda"), "logoid": f.get("logoid")})
+            log("global", p["t"], len(hist), hist[-1][1], p["ccy"], "mcap$", peers_out[-1]["mcap_usd"])
+        cal = [d for d, _ in gidx["^GSPC"]["history"]]
+        gi_hist, gi_w = peer_index({p["t"]: {"shares": p["shares"], "history": p["history_usd"]} for p in peers_out}, cal, GLOBAL_CAP)
+        glob = {"peers": peers_out, "indices": gidx, "fx": gfx,
+                "index": {"code": "XGLOBAL", "name": "Global rakip endeksi", "cap": GLOBAL_CAP, "history": gi_hist,
+                          "members": [[p["t"], p["name"], p["mcap_usd"], round(gi_w.get(p["t"], 0), 4)] for p in peers_out]}}
+        log("global index", len(gi_hist), gi_hist[-1] if gi_hist else None, gi_w)
+    except Exception as e:  # noqa: BLE001
+        warnings.append(f"global: {e}")
+        log("global FAILED", e)
+
     ok = all(c["history"] for c in companies) and "XU100" in benchmarks and fx
     if not ok and prev:
         log("Too much missing data; keeping previous data.json")
@@ -421,6 +500,7 @@ def main():
         "benchmarks": benchmarks,
         "companies": companies,
         "peers": {t: {k: v for k, v in p.items()} for t, p in peers.items()},
+        "global": glob,
         "warnings": warnings,
     }
     with open(OUT, "w", encoding="utf-8") as f:
