@@ -113,12 +113,17 @@ PEERS = {
     "ULKER": ["KRVGD", "ELITE", "DURKN", "OYLUM"],
     "BESLR": ["TUKAS", "TATGD", "PETUN", "DARDL", "FRIGO", "PENGD"],
     "SOKM": ["BIMAS", "MGROS", "CRFSA", "GMTAS", "MOPAS", "KIMMR"],
-    "BIZIM": ["MGROS", "GMTAS"],
+    "BIZIM": ["BIMAS", "MGROS", "CRFSA", "GMTAS", "MOPAS", "KIMMR"],  # same food-retail basket as SOKM
     "GOZDE": ["ISGSY", "BULGS", "HDFGS", "VERTU"],
     "PENTA": ["INDES", "INGRM", "DGATE", "ARENA", "DESPC"],
     "MAKTK": ["MEKAG", "IMASM"],
 }
 PEER_CAP = 0.40  # max weight of one company in a peer index (BIST-style cap)
+# Companies under common control are capped together as one company.
+PEER_GROUPS = {
+    "PENTA": {"INDES": "İndeks Grubu", "DGATE": "İndeks Grubu", "DESPC": "İndeks Grubu"},
+}
+PEER_INDEX_NAME = {"SOKM": "Gıda perakende rakip endeksi", "BIZIM": "Gıda perakende rakip endeksi"}
 
 # Global peers for ULKER (home-market benchmark per company; prices via Yahoo, fundamentals via TradingView).
 GLOBAL_PEERS = [
@@ -138,7 +143,13 @@ GLOBAL_CAP = 0.25
 # NAV (net aktif değer) discount for investment trusts: NAV = balance-sheet equity (fair-value accounting).
 NAV_TICKERS = ["GOZDE", "ISGSY", "BULGS", "HDFGS", "VERTU"]
 # Seed values for history before TradingView's latest two periods (source noted in UI).
-NAV_SEED = {"GOZDE": {"2025-09-30": 28236000000}}  # Global Menkul analist notu, 30.09.2025 NAD
+# As-reported "Toplam Özkaynaklar" from Gözde's own financial statements (KAP), TL.
+NAV_SEED = {"GOZDE": {
+    "2025-12-31": 25396558262,  # 2025 yıllık finansal rapor (KAP özet finansal bilgiler)
+    "2026-03-31": 26585946865,  # 01.01-31.03.2026 ara dönem raporu
+    "2026-06-30": 27504050680,  # 01.01-30.06.2026 ara dönem raporu
+}}
+NAV_EXCLUDE = {"GOZDE": {"2025-09-30"}}  # earlier analyst-note seed, removed (not a statement figure)
 
 
 def log(*a):
@@ -150,7 +161,12 @@ def to_date(ts):
 
 
 def series(bars):
-    return [[to_date(t), round(c, 4)] for t, c in bars]
+    """[[date, close]] sorted by date; if a source returns two bars for the same day
+    (Yahoo FX does: daily bar + live bar), the later one wins."""
+    out = {}
+    for t, c in bars:
+        out[to_date(t)] = round(c, 4)
+    return [[d, v] for d, v in sorted(out.items())]
 
 
 def retry(fn, *a, tries=3, **kw):
@@ -189,48 +205,83 @@ def weighted(rows, key):
 
 
 def capped_weights(mcaps, cap):
-    """Market-cap weights with a per-name cap; excess is spread pro rata over the rest."""
-    tot = sum(mcaps.values())
-    if tot <= 0:
+    """Market-cap weights with a per-name cap (water-filling): names that hit the cap are
+    fixed at the cap and the remainder is split pro rata among the others, repeated until
+    nobody is over. Weights sum to 1 exactly."""
+    m = {k: v for k, v in mcaps.items() if v and v > 0}
+    if not m:
         return {}
-    w = {k: v / tot for k, v in mcaps.items()}
-    cap = max(cap, 1.0 / len(w))
-    for _ in range(20):
-        over = [k for k, v in w.items() if v > cap + 1e-9]
+    cap = max(cap, 1.0 / len(m))
+    fixed = set()
+    while True:
+        free = [k for k in m if k not in fixed]
+        rest = 1.0 - cap * len(fixed)
+        tot = sum(m[k] for k in free)
+        w = {k: cap for k in fixed}
+        w.update({k: rest * m[k] / tot for k in free})
+        over = [k for k in free if w[k] > cap + 1e-12]
         if not over:
-            break
-        excess = sum(w[k] - cap for k in over)
-        for k in over:
-            w[k] = cap
-        rest = [k for k in w if k not in over]
-        rest_sum = sum(w[k] for k in rest)
-        if rest_sum <= 0:
-            break
-        for k in rest:
-            w[k] += excess * w[k] / rest_sum
+            return w
+        fixed.update(over)
+
+
+def group_capped_weights(mcaps, cap, groups=None):
+    """Like capped_weights, but names in the same group share one cap.
+    groups: {ticker: group_name}; tickers not listed are their own group."""
+    groups = groups or {}
+    gm = {}
+    for t, v in mcaps.items():
+        g = groups.get(t, t)
+        gm[g] = gm.get(g, 0) + v
+    gw = capped_weights(gm, cap)
+    w = {}
+    for t, v in mcaps.items():
+        g = groups.get(t, t)
+        if gm.get(g, 0) > 0 and g in gw:
+            w[t] = gw[g] * v / gm[g]
     return w
 
 
-def peer_index(peers, dates, cap):
+def peer_index(peers, dates, cap, groups=None, max_stale_days=10):
     """Chain-linked, daily-rebalanced, cap-weighted price index (start = 100).
 
     peers: {ticker: {"shares": n, "history": [[date, close], ...]}}
     dates: trading-day calendar (list of ISO dates)
+    groups: optional {ticker: group_name}; a group is capped as one company.
+    A member with no bar on a calendar day (foreign holiday, trading halt) keeps its last
+    close for that day (0% return) and its move is counted on its next trading day.
+    A member whose last bar is older than max_stale_days drops out until it trades again.
     Returns (history [[date, value]], latest weights {ticker: w}).
     """
-    px = {t: dict(p["history"]) for t, p in peers.items() if p.get("history") and p.get("shares")}
+    import bisect
+    px, keys = {}, {}
+    for t, p in peers.items():
+        if p.get("history") and p.get("shares"):
+            h = sorted((r[0], r[1]) for r in p["history"] if r[1])
+            if h:
+                keys[t] = [r[0] for r in h]
+                px[t] = [r[1] for r in h]
     if not px:
         return [], {}
-    start = min(min(h) for h in px.values())
-    cal = [d for d in dates if d >= start]
+
+    def at(t, d):
+        i = bisect.bisect_right(keys[t], d) - 1
+        if i < 0:
+            return None  # not listed yet
+        age = (dt.date.fromisoformat(d) - dt.date.fromisoformat(keys[t][i])).days
+        return px[t][i] if age <= max_stale_days else None
+
+    start = min(k[0] for k in keys.values())
+    cal = sorted(d for d in set(dates) if d >= start)
     out, val, last_w, prev = [], 100.0, {}, None
     for d in cal:
         if prev is not None:
-            mc = {t: peers[t]["shares"] * px[t][prev] for t in px if prev in px[t] and d in px[t]}
-            w = capped_weights(mc, cap)
+            p0 = {t: at(t, prev) for t in px}
+            p1 = {t: at(t, d) for t in px}
+            mc = {t: peers[t]["shares"] * p0[t] for t in px if p0[t] and p1[t]}
+            w = group_capped_weights(mc, cap, groups)
             if w:
-                r = sum(w[t] * (px[t][d] / px[t][prev] - 1) for t in w)
-                val *= 1 + r
+                val *= 1 + sum(w[t] * (p1[t] / p0[t] - 1) for t in w)
                 last_w = w
         out.append([d, round(val, 4)])
         prev = d
@@ -421,11 +472,13 @@ def main():
         # peer index (XRAKIP)
         plist = PEERS.get(t, [])
         pdata = {p: peers[p] for p in plist if p in peers and peers[p].get("history")}
-        hist, w = peer_index(pdata, calendar, PEER_CAP)
+        grp = PEER_GROUPS.get(t, {})
+        hist, w = peer_index(pdata, calendar, PEER_CAP, groups=grp)
         item["peer_index"] = {
-            "code": "XRAKIP", "name": f"{c['name']} rakip endeksi", "cap": PEER_CAP,
+            "code": "XRAKIP", "name": PEER_INDEX_NAME.get(t, f"{c['name']} rakip endeksi"), "cap": PEER_CAP,
+            "groups": {g: [p for p in plist if grp.get(p) == g] for g in sorted(set(grp.values()))},
             "history": hist,
-            "members": [[p, peers[p]["name"], peers[p].get("mcap"), round(w.get(p, 0), 4)] for p in plist if p in peers],
+            "members": [[p, peers[p]["name"], peers[p].get("mcap"), round(w.get(p, 0), 4), grp.get(p)] for p in plist if p in peers],
         } if hist else old.get("peer_index")
         item["peers"] = plist
         companies.append(item)
@@ -504,9 +557,9 @@ def main():
             d = dict(zip(ncols, r["d"]))
             t = d["name"]
             entry = nav.get(t, {})
-            logd = dict(entry.get("equity_log", {}))
+            logd = {k: v for k, v in entry.get("equity_log", {}).items() if k not in NAV_EXCLUDE.get(t, set())}
             for k, v in NAV_SEED.get(t, {}).items():
-                logd.setdefault(k, v)
+                logd[k] = v
             for eq, ts in ((d["total_equity_fy"], d["fiscal_period_end_fy"]), (d["total_equity_fq"], d["fiscal_period_end_fq"])):
                 if eq and ts:
                     logd[dt.datetime.fromtimestamp(ts, dt.timezone.utc).date().isoformat()] = eq
