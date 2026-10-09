@@ -136,7 +136,7 @@ GLOBAL_PEERS = [
     {"t": "LISN", "name": "Lindt & Sprüngli", "yahoo": "LISN.SW", "tv": ("switzerland", "SIX:LISN"), "ccy": "CHF", "bench": "^SSMI", "country": "İsviçre"},
     {"t": "LOTB", "name": "Lotus Bakeries", "yahoo": "LOTB.BR", "tv": ("belgium", "EURONEXT:LOTB"), "ccy": "EUR", "bench": "^BFX", "country": "Belçika"},
 ]
-GLOBAL_INDICES = {"^GSPC": "S&P 500", "^SSMI": "SMI (İsviçre)", "^BFX": "BEL 20 (Belçika)", "XLP": "S&P 500 Tüketim Malları (XLP)"}
+GLOBAL_INDICES = {"^GSPC": "S&P 500", "^SSMI": "SMI (İsviçre)", "^BFX": "BEL 20 (Belçika)", "XLP": "ABD temel tüketim ETF'i (XLP)"}
 GLOBAL_FX = {"CHF": "CHFUSD=X", "EUR": "EURUSD=X"}
 GLOBAL_CAP = 0.25
 
@@ -150,6 +150,12 @@ NAV_SEED = {"GOZDE": {
     "2026-06-30": 27504050680,  # 01.01-30.06.2026 ara dönem raporu
 }}
 NAV_EXCLUDE = {"GOZDE": {"2025-09-30"}}  # earlier analyst-note seed, removed (not a statement figure)
+# First trading day each statement was public (KAP). The discount chart uses a statement only from this date.
+NAV_EFFECTIVE_SEED = {"GOZDE": {
+    "2025-12-31": "2026-03-03",  # exact KAP time not found; SPK 60-day deadline (02.03.2026) -> next trading day, conservative
+    "2026-03-31": "2026-04-30",  # KAP 29.04.2026 20:48
+    "2026-06-30": "2026-08-05",  # KAP 04.08.2026 21:29
+}}
 
 
 def log(*a):
@@ -194,6 +200,11 @@ def tv_scan(payload, market="turkey"):
     r = requests.post(f"https://scanner.tradingview.com/{market}/scan", json=payload, headers=UA, timeout=30)
     r.raise_for_status()
     return r.json()["data"]
+
+
+def coverage(rows, key):
+    """How many companies actually enter a weighted multiple (positive values only)."""
+    return sum(1 for r in rows if r.get("mcap") and r.get(key) and r[key] > 0)
 
 
 def weighted(rows, key):
@@ -242,7 +253,7 @@ def group_capped_weights(mcaps, cap, groups=None):
     return w
 
 
-def peer_index(peers, dates, cap, groups=None, max_stale_days=10):
+def peer_index(peers, dates, cap, groups=None, max_stale_days=30):
     """Chain-linked, daily-rebalanced, cap-weighted price index (start = 100).
 
     peers: {ticker: {"shares": n, "history": [[date, close], ...]}}
@@ -250,7 +261,8 @@ def peer_index(peers, dates, cap, groups=None, max_stale_days=10):
     groups: optional {ticker: group_name}; a group is capped as one company.
     A member with no bar on a calendar day (foreign holiday, trading halt) keeps its last
     close for that day (0% return) and its move is counted on its next trading day.
-    A member whose last bar is older than max_stale_days drops out until it trades again.
+    A member whose last bar is older than max_stale_days (30) drops out until it trades again
+    (meant for delistings; a shorter halt is bridged at the last price).
     Returns (history [[date, value]], latest weights {ticker: w}).
     """
     import bisect
@@ -331,7 +343,13 @@ def main():
         except Exception as e:  # noqa: BLE001
             warnings.append(f"{code} members: {e}")
             log("members FAILED", code, e)
-    bank_set = {m["t"] for m in member_data.get("XBANK", [])}
+    if member_data.get("XBANK"):
+        bank_list = sorted(m["t"] for m in member_data["XBANK"])
+    else:
+        bank_list = prev.get("xbank_members") or []
+        if bank_list:
+            warnings.append("XBANK listesi alınamadı, önceki liste kullanıldı")
+    bank_set = set(bank_list)
 
     # ---- FX ----
     fx = prev.get("fx", {})
@@ -455,6 +473,8 @@ def main():
 
         # valuation vs sector index constituents
         group = member_data.get(c["bench"])
+        if group is not None and t in EXCLUDE_BANKS_FOR and not bank_set:
+            group = None  # can't exclude banks reliably -> keep previous values rather than mislabel
         if group is not None:
             label = BENCHMARKS[c["bench"]]
             if t in EXCLUDE_BANKS_FOR:
@@ -464,10 +484,12 @@ def main():
             item["peer_count"] = len(group)
             item["sector_pe"] = weighted(group, "pe")
             item["sector_pb"] = weighted(group, "pb")
+            item["sector_pe_n"] = coverage(group, "pe")
+            item["sector_pb_n"] = coverage(group, "pb")
             ranked = [m["t"] for m in member_data[c["bench"]]]
             item["index_rank"] = ranked.index(t) + 1 if t in ranked else None
         else:
-            for k in ("peer_label", "peer_count", "sector_pe", "sector_pb", "index_rank"):
+            for k in ("peer_label", "peer_count", "sector_pe", "sector_pb", "sector_pe_n", "sector_pb_n", "index_rank"):
                 item[k] = old.get(k)
         # peer index (XRAKIP)
         plist = PEERS.get(t, [])
@@ -557,16 +579,32 @@ def main():
             d = dict(zip(ncols, r["d"]))
             t = d["name"]
             entry = nav.get(t, {})
-            logd = {k: v for k, v in entry.get("equity_log", {}).items() if k not in NAV_EXCLUDE.get(t, set())}
-            for k, v in NAV_SEED.get(t, {}).items():
-                logd[k] = v
+            excl = NAV_EXCLUDE.get(t, set())
+            logd = {k: v for k, v in entry.get("equity_log", {}).items() if k not in excl}
+            effd = {k: v for k, v in entry.get("equity_effective", {}).items() if k not in excl}
+            now_ist = dt.datetime.now(dt.timezone(dt.timedelta(hours=3)))
+            # first time we see a statement = when it became public (runs are every 30 min in market hours);
+            # if first seen after the close, it applies from the next day
+            seen = (now_ist + dt.timedelta(days=1) if now_ist.hour * 60 + now_ist.minute > 18 * 60 + 10 else now_ist).date().isoformat()
             for eq, ts in ((d["total_equity_fy"], d["fiscal_period_end_fy"]), (d["total_equity_fq"], d["fiscal_period_end_fq"])):
                 if eq and ts:
-                    logd[dt.datetime.fromtimestamp(ts, dt.timezone.utc).date().isoformat()] = eq
+                    k = dt.datetime.fromtimestamp(ts, dt.timezone.utc).date().isoformat()
+                    if k in excl:
+                        continue
+                    if k not in logd:          # new statement: keep the first-reported figure and the day it appeared
+                        logd[k] = eq           # (later restatements don't overwrite)
+                        effd.setdefault(k, seen)
+            for k, v in NAV_SEED.get(t, {}).items():   # figures typed from the statements win
+                logd[k] = v
+            for k, v in NAV_EFFECTIVE_SEED.get(t, {}).items():
+                effd[k] = v
+            last_k = max(logd) if logd else None   # headline = latest statement in the log (as reported)
             nav[t] = {"name": d["description"], "mcap": d["market_cap_basic"], "shares": d["total_shares_outstanding_fundamental"],
-                      "equity": d["total_equity_fq"], "equity_date": dt.datetime.fromtimestamp(d["fiscal_period_end_fq"], dt.timezone.utc).date().isoformat() if d["fiscal_period_end_fq"] else None,
-                      "equity_log": dict(sorted(logd.items()))}
-            log("nav", t, nav[t]["equity"], nav[t]["equity_date"], "disc %.0f%%" % ((1 - d["market_cap_basic"] / d["total_equity_fq"]) * 100) if d["total_equity_fq"] else "")
+                      "equity": logd[last_k] if last_k else d["total_equity_fq"],
+                      "equity_date": last_k or (dt.datetime.fromtimestamp(d["fiscal_period_end_fq"], dt.timezone.utc).date().isoformat() if d["fiscal_period_end_fq"] else None),
+                      "equity_log": dict(sorted(logd.items())),
+                      "equity_effective": dict(sorted(effd.items()))}
+            log("nav", t, nav[t]["equity"], nav[t]["equity_date"], "disc %.0f%%" % ((1 - d["market_cap_basic"] / nav[t]["equity"]) * 100) if nav[t]["equity"] else "")
     except Exception as e:  # noqa: BLE001
         warnings.append(f"nav: {e}")
         log("nav FAILED", e)
@@ -584,6 +622,7 @@ def main():
         "peers": {t: {k: v for k, v in p.items()} for t, p in peers.items()},
         "global": glob,
         "nav": nav,
+        "xbank_members": bank_list,
         "warnings": warnings,
     }
     with open(OUT, "w", encoding="utf-8") as f:
