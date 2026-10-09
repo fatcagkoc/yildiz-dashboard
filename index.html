@@ -200,6 +200,10 @@ tr.me .dbar i{opacity:1}
 .notes{margin-top:18px;color:var(--muted);font-size:12px;line-height:1.6}
 .notes p{margin:0 0 4px}
 .warn{display:none;margin-bottom:12px;padding:10px 12px;border-radius:8px;background:var(--down-bg);color:var(--down);font-size:13px}
+.dwarn{display:none;margin-bottom:12px;padding:8px 12px;border-radius:8px;background:var(--surface2);color:var(--text2);font-size:12.5px}
+.dwarn summary{cursor:pointer}.dwarn ul{margin:6px 0 0;padding-left:18px}
+.chart-empty{display:flex;align-items:center;justify-content:center;min-height:180px;color:var(--muted);font-size:13px;text-align:center;padding:0 16px}
+.asof{color:var(--muted);font-size:12px;font-weight:400}
 .err{padding:40px;text-align:center;color:var(--text2)}
 [hidden]{display:none!important}
 @media (max-width:960px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:14px}.stat{padding:0 12px 0 0;border-left:0}}
@@ -227,6 +231,7 @@ tr.me .dbar i{opacity:1}
 <main class="wrap">
   <div class="metaline"><span id="updated">Yükleniyor…</span><span id="srcline"></span></div>
   <div class="warn" id="stale"></div>
+  <details class="dwarn" id="dwarn"></details>
 
   <!-- ================= GRUP ================= -->
   <section id="page-grup">
@@ -261,7 +266,7 @@ tr.me .dbar i{opacity:1}
     <div class="grid2">
       <div class="card">
         <div class="head-row">
-          <div><h2>Grup toplam piyasa değeri</h2><p class="hint" id="grpHint">7 şirketin toplamı</p></div>
+          <div><h2><span class="hint-term" data-m="gmcap">Grup toplam piyasa değeri</span></h2><p class="hint" id="grpHint">7 şirketin toplamı</p></div>
           <div class="seg" role="group" aria-label="Dönem" id="rangeG"></div>
         </div>
         <div class="chart" id="grpChart"></div>
@@ -275,7 +280,7 @@ tr.me .dbar i{opacity:1}
 
     <div class="card mt">
       <h2>Değerleme: F/K ve PD/DD</h2>
-      <p class="hint">Sektör değeri = şirketin bağlı olduğu BIST sektör endeksindeki şirketlerin piyasa değeri ağırlıklı çarpanı. Zarar eden şirketlerde F/K gösterilmez.</p>
+      <p class="hint">Sektör değeri = şirketin bağlı olduğu BIST sektör endeksindeki şirketlerin piyasa değeri ağırlıklı çarpanı. Hesaba yalnızca çarpanı pozitif olan şirketler girer (zarar edenlerin F/K'sı hesaplanamaz); parantez içinde kaç şirketin girdiği yazar.</p>
       <div class="tbl-wrap">
         <table class="num">
           <thead><tr><th>Şirket</th><th>Karşılaştırılan endeks</th><th><span class="hint-term" data-m="pe">F/K</span></th><th><span class="hint-term" data-m="spe">Sektör F/K</span></th><th><span class="hint-term" data-m="pb">PD/DD</span></th><th><span class="hint-term" data-m="spb">Sektör PD/DD</span></th></tr></thead>
@@ -346,7 +351,7 @@ tr.me .dbar i{opacity:1}
       </div>
       <div class="card mt">
         <h2>Emsal GSYO'lar</h2>
-        <p class="hint">Borsadaki diğer girişim sermayesi yatırım ortaklıkları, aynı yöntemle. Son bilanço özkaynağı (30.06.2026). Çubuk uzunluğu = iskonto.</p>
+        <p class="hint">Borsadaki diğer girişim sermayesi yatırım ortaklıkları, aynı yöntemle. Her şirketin son bilanço özkaynağı kullanılır (bilanço tarihi özkaynağın altında). Çubuk uzunluğu = iskonto. Medyan, Gözde hariç emsallerden hesaplanır.</p>
         <div class="tbl-wrap">
           <table class="num">
             <thead><tr><th>Şirket</th><th><span class="hint-term" data-m="mcap">Piyasa değeri</span></th><th><span class="hint-term" data-m="nav">Özkaynak (NAD)</span></th><th><span class="hint-term" data-m="pb">PD/DD</span></th><th><span class="hint-term" data-m="disc">İskonto</span></th><th style="width:34%"></th></tr></thead>
@@ -361,7 +366,7 @@ tr.me .dbar i{opacity:1}
 
       <div class="card">
         <h2>Her şirket kendi endeksine göre</h2>
-        <p class="hint">Hücre = şirket getirisi − kendi ana endeksinin getirisi (puan, yerel para birimi). Yeşil = pazarını geçiyor, kırmızı = geride. Sütun ağırlıklı kırmızıysa sektör genelinde bir trend var demektir.</p>
+        <p class="hint">Hücre = şirket getirisi − kendi ana endeksinin getirisi (puan, yerel para birimi). Yeşil = pazarını geçiyor, kırmızı = geride. Bir sütunda hücrelerin çoğu aynı renkteyse hareket tek şirkete özgü değil, sektöre yayılmış olabilir.</p>
         <div class="tbl-wrap">
           <table class="num heat">
             <thead><tr><th>Şirket</th><th>Kendi endeksi</th><th>1 Ay</th><th>Yılbaşından beri</th><th>1 Yıl</th></tr></thead>
@@ -390,11 +395,11 @@ tr.me .dbar i{opacity:1}
   </section>
 
   <div class="notes">
-    <p><b>Kaynaklar:</b> Fiyat, endeks geçmişi, endeks bileşenleri, piyasa değeri, F/K ve PD/DD: TradingView. USD/TRY: TradingView ve Yahoo Finance. Veriler yaklaşık 15 dakika gecikmelidir; borsa açıkken hafta içi saatte bir güncellenir.</p>
+    <p><b>Kaynaklar:</b> Fiyat, endeks geçmişi, endeks bileşenleri, piyasa değeri, F/K ve PD/DD: TradingView. USD/TRY: TradingView ve Yahoo Finance. Veriler yaklaşık 15 dakika gecikmelidir; hafta içi 10:20–18:50 arasında yarım saatte bir güncellenir (18:50 güncellemesi günün kapanışını alır). Açık sayfa yeni veriyi 10 dakikada bir kendiliğinden çeker.</p>
     <p><b>Sektör endeksleri:</b> ULKER, BESLR → BIST Gıda İçecek (XGIDA) · SOKM, BIZIM → BIST Ticaret (XTCRT) · GOZDE → BIST Mali (XUMAL) · PENTA → BIST Teknoloji (XUTEK) · MAKTK → BIST Metal Eşya Makina (XMESY). Genel karşılaştırma: BIST 100. GOZDE'nin değerleme karşılaştırmasında bankalar hariç tutulur.</p>
-    <p><b>Rakip endeksi (XRAKIP):</b> Her şirket için borsadaki doğrudan rakiplerinden hesaplanan, piyasa değeri ağırlıklı fiyat endeksi. Tek şirketin (ya da aynı gruba ait şirketlerin toplamının) ağırlığı en fazla %40 ile sınırlıdır, ağırlıklar her gün yeniden hesaplanır. Bir rakip o gün işlem görmediyse (tatil, işlem durdurma) son fiyatıyla tutulur, hareketi ilk işlem gününde endekse yansır. ŞOK ve Bizim Toptan aynı gıda perakende rakip endeksini kullanır. Resmi bir BIST endeksi değildir; rakip listeleri Yıldız Holding strateji ekibince belirlenmiştir.</p>
+    <p><b>Rakip endeksi (XRAKIP):</b> Her şirket için borsadaki doğrudan rakiplerinden hesaplanan, piyasa değeri ağırlıklı fiyat endeksi. Tek şirketin (ya da aynı gruba ait şirketlerin toplamının) ağırlığı en fazla %40 ile sınırlıdır, ağırlıklar her gün yeniden hesaplanır. Ağırlıklar bir önceki kapanıştaki piyasa değerine göre belirlenir. Bir rakip o gün işlem görmediyse (tatil, işlem durdurma) son fiyatıyla tutulur, hareketi ilk işlem gününde endekse yansır; 30 günden uzun süre işlem görmeyen rakip, yeniden işlem görene kadar endeks dışında kalır. Yalnızca 2 rakibi olan şirkette (Makina Takım) %40 sınırı matematiksel olarak uygulanamaz; iki rakip eşit (%50/%50) ağırlıkla girer. ŞOK ve Bizim Toptan aynı gıda perakende rakip endeksini kullanır. Resmi bir BIST endeksi değildir; rakip listeleri Yıldız Holding strateji ekibince belirlenmiştir.</p>
     <div id="navNote" hidden></div>
-    <p><b>Fiyatlar</b> bedelsiz sermaye artırımı ve bölünmelere göre düzeltilmiştir. <b>USD görünümü:</b> her günün fiyatı o günün USD/TRY kuruyla çevrilir. Bilgi amaçlıdır, yatırım tavsiyesi değildir.</p>
+    <p><b>Fiyatlar</b> bedelsiz sermaye artırımı ve bölünmelere göre düzeltilmiştir. <b>Geçmiş piyasa değerleri</b> (grup toplamı grafiği ve endeks ağırlıkları) bugünkü hisse adediyle hesaplanır; geçmişteki bedelli sermaye artırımları ayrıca dikkate alınmaz. <b>USD görünümü:</b> her günün fiyatı o günün USD/TRY kuruyla çevrilir. Bilgi amaçlıdır, yatırım tavsiyesi değildir.</p>
   </div>
 </main>
 
@@ -441,6 +446,17 @@ function money(v,short=true){if(v==null||isNaN(v))return '–';const usd=state.c
 function pct(v,d=1){if(v==null||isNaN(v))return '–';return (v>0?'+':v<0?'−':'')+nf(d).format(Math.abs(v))+'%'}
 function pp(v){return (v>0?'+':v<0?'−':'')+nf(1).format(Math.abs(v))+' puan'}
 function cls(v){return v>0?'pos':v<0?'neg':''}
+// Turkish possessive suffix for a formatted number: 74 -> "'ü", 12,7 -> "'si", 40 -> "'ı"
+function ek(str){const d=String(str).replace(/[^0-9]/g,'');const one={'1':"'i",'2':"'si",'3':"'ü",'4':"'ü",'5':"'i",'6':"'sı",'7':"'si",'8':"'i",'9':"'u"},
+  ten={'1':"'u",'2':"'si",'3':"'u",'4':"'ı",'5':"'si",'6':"'ı",'7':"'i",'8':"'i",'9':"'ı"};const l=d.slice(-1);if(l&&l!=='0')return one[l];if(String(str).includes(','))return "'ı";const t=d.slice(-2,-1);return t&&t!=='0'?ten[t]:"'ü"}
+function median(a){const v=a.filter(x=>x!=null&&!isNaN(x)).sort((x,y)=>x-y),n=v.length;if(!n)return null;return n%2?v[(n-1)/2]:(v[n/2-1]+v[n/2])/2}
+function cutTo(hist,end){return hist.filter(r=>r[0].slice(0,10)<=end)}
+/* stale check: runs are weekdays 10:20–18:50 Istanbul (UTC+3, no DST), every 30 min */
+function lastSlot(nowMs){const H=36e5,IST=3*H;const t=new Date(nowMs+IST);
+  for(let k=0;k<10;k++){const day=new Date(Date.UTC(t.getUTCFullYear(),t.getUTCMonth(),t.getUTCDate()-k));const wd=day.getUTCDay();if(wd===0||wd===6)continue;
+    for(let m=18*60+50;m>=10*60+20;m-=30){const slot=day.getTime()+m*6e4-IST;if(slot<=nowMs)return slot}}return null}
+// e = latest run that should have finished (runs take a few minutes), p = the one before; warn only if both were missed
+function staleInfo(updMs,nowMs){const e=lastSlot(nowMs-15*6e4);if(e==null)return null;const p=lastSlot(e-6e4);if(p==null)return null;return updMs<p-5*6e4?{hours:(nowMs-updMs)/36e5,slot:e}:null}
 function fmtDateTR(s){const [y,m,d]=s.slice(0,10).split('-');return `${d}.${m}.${y}`+(s.length>10?' '+s.slice(11,16):'')}
 const LOGO_OVERRIDE={BESLR:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHAAAABwCAIAAABJgmMcAAARrElEQVR42u2cebQfRZXHv7eqevn1b3trXgLZhEBIiDkQGMkgmKAEcExEJeMIBkPOAAERMIoKAjqADoJEUVkPGkFcWaKDgMgWQVkGQ8BJJAQSQhaS9/L27bd0d907f/TvZR8SIJyjY3/PO+/8zjv1uqs+deveW7f61wRg+fLlkyZNYmalFFK9M6UEU6Ap0BRoqhRoCjQFmioFmgJNgaZKgaZAU6Ap0FQp0BRoCjRVCjQFmgJNlQJNgaZAU6VAU6Ap0BRoqhRoCjQFmioFmgJNgaZKgaZAU6CpUqAp0BRoCjRVCvRvTOZvqjcCEREIABAREe3SoCb6fwFULISYVM2yRUDJLwiYWYS0ViBKBswCQEjefBkQMYSEIbCijSairbQ4jkUprRREICI1wCQQhoBAQgTani4LM5GxBCWgpHPbZotAxCQQkACAEAGsZIdLQISFmaG0IQVAqNZ8b2byrQBlCClRIIABXSOXjBFa17BZtlBaJXZGpN60ByJiFQmLUQoG/VG4vnVTpVz2XG94U1NTrgAgZoZSWsQSFEjVpkEAsaQI0NvPD4M1QcOCanO7DQUBEAUREmEQsSIHUDtDIlJQSgOwzIpIQExQe7cs9hZo8tXau5589Lq7bs/mi2xjRcQ18xCjzaj65umTDjv5Ax9qCnJxHJFxnlu98sIbrzW+B5ad7IhAsbUNQe7nX76ikM1rpToHBxbe+7N7n3p8Y19HXI0co4u5wrQJh136yTMOHfOeahQax73ryUcW/ur2TF1dWC7fesGlh489UFlWqgYkseDeKDz9qku3DPQZo4kh2y8OEhCF5ep3z1pwzITJnf19cxde0T7Yr4xSUqNFgICKQe7wUQfMOnra1PETIRDLpBQTtOw7CxURAJu62l9Y8TzqG2FjxBbCtTsYDZGfPv6bqxff/sPPXT598hQAvYODf17xAjIZiIAZwjWLEYAIcZQp1JXjqA7Y0N318f9Y8PxLL6JQQBwisqHW5dj+Ysn9Dz335C8u//aJk48EsKmrY9nyZWhqRnmgr1ICwATacblasc++sqKjpxOOC7awFkRIQJCANMqD7X29IIQc/+nV5b29PTAalsFJSwEpKP27/15yza9/Mve4j1x77hcbXV+YSat96UMTH+IZrYIg8DOhjRuy+YzjsgiA9p6uUlTNBsU1bZtm/+fFf/jODyftN1oRmSDr+hkrNudlMo7LwsnYEgttzOU1KQBfXvT9519+MRjWUhromz7xiPEto1a1v/HEihcKhYa+uHLmdVc88d1FBzQ2a21UNpfzgkGGR7sfHgFBxtfVwNHGMaboZViEUPM/BqpULedcPwl6QSYzEFYdrV1tin7AzEQUxtGWvh54GeV6i+6/p7W35+7LvpVR2gKa9rzq9xYo1Vw+MYOJwnL5pouuOn7yEZU4IqKNmzdddMeNj/3lz8VcXWd32w8fWHz9WZ8Xa2OCR1IdGPjGnHPmHXdSJYqVHnKqAhCa88UN3Z2PLH3a1DWU+/ov+dS8b356ftLg5t/f99nrr4DWHeXOZ5e/cMD0E4SZJVkaMQ/1apcREjOEVKU0cNIxx9923leqcayVGrohwFIMsgC00sIChcrgwEemnXjrORdVopC0ttXohddXX/qTm1a8sTY7YviDTz320yW/O3vGLGELpd+9tEmKfpD3M3n2oahp3Pibz7v4iAtPj8KYjP/SG+sAaFIQEQJY6oNcY76I3fmgjp6uUhzGcTRh1Hu+OnsuiZTCSsbxzj3xo1va2zLZ4ONTp49ubEoQ7H36BZGM6zXli7tzXzvHh7zjN+aLEEmc0qhhLRP2Hz31i/N64wr57m+eXnL2jFlaiHcMgPs4D63EcWyttZZIGa3qCkXX93sqFVgU/RwAAUMoJkChamuNtdbbvDLB0aalrqHo+NUwHDGs5Ypf3nbt3PMDLxNFIYv++pyzkrYh27fcPyJmjq21zImF0lbfRTCkt197lpmFbRwrbUQQcXzQ/qPGjh69bNVLULqtrxuAIrU3nXjbOyUpBIHR2nNd1zFKqe//1y86uztBIlz91PQTACS3V0KwyDpe0thoXfsxxtEmZrtffePMI4/l3q6GbP5Hj95/4mUXPLVyheO4ntZgKUURs9DORrVHmASR5Eae4yQfEhmtaZeLkSJFynGMVspolXHcVZs3vbZxo84ExDwm3wjAgvdl2rRTxFeOd/Xdd4xpHFblWIFeWb/2yVUrfDcwLAtOP/cTU48FYJQGmJlV1r/hwXt+v/TpiFkBREJKlQcH5xw/85T3H8exveqs85euf3n95o1jmvZ75Pk/PrFi2b/PmLVg9meGF+rzGT+yMYS3BkbZU/AkAVvWnv/0yv857drLI+ZkQ6BIlcPKlLEHXTbnzJpbGMIfxfFApRLHMRkdR9Hzq1/56u039JQGstn8YLl88rQPJaPel2nTzkCNefDZP8BGtTu4bpAthJXKhR/7zJWfPoutpSTRJyGGR87SVSuW/vUFKAVhEKA0eroPHTdh9jEfjCDD84UlV99656P3v9q2+cWXV4RafrzkoTXtbVntzJ0x6+Spx4RhZdvdaU9QAYgY11nb3rp249odBlvuaz/s6CFPQgCstSbI3v/iM++9cA5btsTW2raOTlEwvjfYunn2CbP+bdoJYnmbs3o3fKgIN9Y3+8ZhYSIarJR6B7qdTO4Hi+98o+2NG8+/pKB1TAKBAkLiXD6fVSYGK1GW4Cg9oLxCJgCgiKzlOi9z/qxPVqNw6viJ31v8894ohFYbB3o+dtnnbrn4G/OPn/lWe8giWdfLZgtJYkeAaFUu+8ML9Tt7PaVKfQP9W9rgOcrxWcQEvgpjN5T5p5515Rnn+Kjt+/bCQN8WUKWULVVvXHDlhyZPqcSRUmqwv++WR+/7/r0/F9//6e/uaSw2XH/mBcwMgJS2/f1fOXv+GR84oRSHDpnEFTFzUzYvABNpAIoAOI572rEzTj1mxs+eeGTZ6pVr2luR9S+48ZojRx94xMETkgvujbRSUbl0wtHH3Tz/okocJ69PUoIYkjVOEqZoyNvaKBo5fPhRB01c19b63OqXvCCI+vunHzb1lvMvPnDYcABWRCXt350ln5QVZFg+35TL1/5WqFs493Or1q17YOkfM/XD7nz8gSvnnOU7LkRYA+D9csWRDU279odFXKUALN+wNuf5o5taQmat1JzpM6YeMun8WxeCTFgt/+ix3x5x8ATZLjTRHtNm5oKXGdXQtLtttN3OOMiWStMPPfz2Cy/rKpWO/dKZqza+rgL/L2tfHigNQiRmNlrXBr0Xif3biPK1a1bCMIrjclgNbVSuVgAcNHI0ohBGdQ32v96+JWNcCCVOsxxHURwPhJUwDqtxFMZRNQ7DOCTIrx5/+MSvLZjy2VOvufdOrRSsjSQO42h4Y9Or69dqpckxa1s3AzBD23YoRMyxtaGNQxtHNo6sDWMrQ3t3IQLIWpv0sBpH1TiqxFEYx2EcR7tgYcvM3BAE3zv3SyTQZNp7u0+99vLuSlkRbJJN711x5O2mTSLFXMExJuN6rnYynr+uY8sDzzyhMoFlziinmM1FzEjiq5VskHWMybu+a1zPOK5xPOO6xiVS9zy75OE//d71Mnc/+cjS19e4nudr1zXODb/55ZrW9b7vIbJBkAFghZOVqy0KuZzROuO4rjaONo7WnmMIxEODh4jrukkPPeN4xvGN4xrjGuPt8gI1BVJKVcPw+EmHLzjlM9WerqBYt3LNy1+47XqltDALwAR5N9Mm50eP/vapl16sxrHWuru76+5nlrzesTkfFPo7t3xwyvtHNTS8vH4NCCyiPP/Xf3qstXVzJY4U1aqPAmHm82b+6wWfOO2epx62hrqqpVP+Y8GCk08bN2LkkpeW3fTbu50giMRKWP3w4VMtszBDYAEy5qb77h7T3BxaISIlYBISPvukT3iZjIgIi/K8v6x99Zt33RHFMW3deioKy+WZUz9w1METrLU7OQ+liJm/duq8R154+sW1rwSNjbc/eO+0yVPOmH6Sjax29D7zoUkhnUUSL5YAXfTgvYjjoQoNIch4Tqa/q+ugseNu+PwlCuS7Ts2jZ7z7nv3DfU8+jKT0vLVbQqcd9+FjD3nv1+d89upfLvJzufWlvgWLvqtIM6ybzXowlXJp9sxTzjzhowC8XE6TcpQS373tocWwca2YKQAYbE89fuYIv0GRgojx/OXr1yx/efkOzspodHS2DGv55/GHusbZPhUTEYBjK4Fxrp9/0Ylfmh/Z2AtyX7zpuinjJk4eOdpaq/Wei6Jmt0EnZhYRXasQExEZYwB4xoGwkBDg5/KkiLcSZ5tVzr988KRLZs+tc/zVmza+snmTY4zRWkeCIC9Zgggn5XARKwLhS392a30m6I8jGFPp7ITWUMQcgSns6QsJYH5tw/qTvnIeICs7W20cDXR1gQCtUBseAQSlQc7Fi34wLF/XMdArbMM4VMY4dY2KapVmIoJRkXHbe/te2/RGR6Wkkoo+QQuIyDFeQmDahMnXzP/CF265ThfrugZ6zr3+qke/dXPGmFBiEigGJ6VurXaNUoRd3s4oLDvV2UtR1DPYXwmrtzyw+Nt3/dgvFiQWVlDJyQ8IBCvWd/3hDU39vb3dfX2VMEIUDlUhAaUABa09x/UdxzeuZxzf9djGxpjA9Zvq6zOuZxzjGddV2mijjDZaK61L5bIVUQTXOK5xrI0jkaQ2EHEcR1E1isIoqkRhR09Xf6Xiaqcah9UoqkZhJY4qUVWsBRhWwAytINDKcX23AoYmY9FcqBs/amydlylmc1k/25zN+/n8wsV3dg70ZVxvsKfr87PP+ObccwLH3ekEQ+0RKAMQeXzZc8vWv9ba1bGpva21p7Ozv69jsK9UrVTZiiYdi7BUORZrEUdI0kNSMI4hVV8oNNU1NOWLLXUNw4oNTYViYy7XWKyvzxcKQTbnBxk/k/P9wPV947iO0diXYqASxaGNKpVKqVoZqFQGK6We8mD3QF9nb19XX09Hf29bX3dbT1dXb2/fQH93aaA/rKBSRrkMEShAa5ADY3R93oB0jFhTGFYntIxsyRUbGhtbmlvGFpomjh77kfcdTXtc8hJbbfRDy55ZeMcNqG+EAEYnswobgy0iC1Iq4zfli8OLjWOGDR/T2DJ2xP4jm4eNaGjer6GpPsgVgsDVe11qk6F6G0SGjgbeUh2EauWQ5DQIgWMCx8DPvPk/VkUG+ge6y4OtPZ2tnR2bOtpfb920rqtt/ZbNm3o7u3p7Kr391sbQBsZRrruybcPK1nVYZRERervmzj595vuOZrZqx6LiLhbKrJTa0N111Pmnt1UGOIoQh1CmkM2Pam4Zv9+oQ0e/55BRY8ftN3pU07DGQp2723e4CpIgBtqOz9BpKGH7EybaGhbobR8Oy44fSYY2H7VJoq2zBQFBgxRAavcRxrLt6O/d0NGxpnXjyg2v/3Xda6s3rlvb0dpb6kNsoR3juhnHPP2dOyaNGMnCasezA7PLtpIs21H1DZ+aduKihxa//7Cjpow75J8OPnTimANGNg3zzS4WzcwitTMb2sqKiEgresu7hbcn2uljbbqI3mRzU1sNgqFt+tDDAFrplmJDS7HhyAMPTppG1m7sbF++bs3SV/+67LXVzyx//uQjp00aMZKtVbssxN0FJRESdFbK/ZXy2IbGnc4+RSShRkTY9UmEv3/VEkNJHgVIEO9gg2/0dGeUqs8VsDsAZnfzTazQGASNQWBZWJIipiKif4SXNNPQUyvbuy8LsDAJiLB/XX3NwmmvE3seCg5KkRYtBP7bfgDmXQVMICMAtFDt2RQQyf+xOs1uKt61v1LiyBOKCiD5RyQqQ5YkCgwQapFBye5NzOzO4LfNDO2zwPH37AGG4pzeCxrp44z7WCnQFGgKNAWaKgWaAk2BpkqBpkBToKlSoCnQFGgKNFUKNAWaAk2VAk2BpkBTpUBToCnQVCnQFGgKNAWaKgWaAk2BpkqBpkBToKlSoCnQFGiqRAaAtdZaO/Qdw1TvGGixWExeY5bieOciAPPmzWtubt72juNU70D/Cxy9lzsCRsW8AAAAAElFTkSuQmCC"};
 function logo(c,size=28){const ini=c.ticker.slice(0,2);
@@ -463,7 +479,7 @@ function renderGroup(rows,bm){const D=state.data;
   const xr=bm.XU100,xLast=D.benchmarks.XU100.history.at(-1)[1];
   const beat=k=>rows.filter(x=>x.r[k]!=null&&x.b[k]!=null&&x.r[k]>x.b[k]).length;
   $('kpis').innerHTML=`
-    <div class="card kpi"><div class="lab">Grup toplam piyasa değeri</div><div class="val num">${money(gLast)}</div>
+    <div class="card kpi"><div class="lab"><span class="hint-term" data-m="gmcap">Grup toplam piyasa değeri</span></div><div class="val num">${money(gLast)}</div>
       <div class="foot num"><span class="${cls(gr['1D'])}">${pct(gr['1D'])}</span> bugün · <span class="${cls(gr['YTD'])}">${pct(gr['YTD'])}</span> yılbaşından beri</div></div>
     <div class="card kpi"><div class="lab">BIST 100</div><div class="val num">${nf(0).format(xLast)}</div>
       <div class="foot num"><span class="${cls(xr['1D'])}">${pct(xr['1D'])}</span> bugün · <span class="${cls(xr['YTD'])}">${pct(xr['YTD'])}</span> YB${state.cur==='USD'?' (USD)':''}</div></div>
@@ -493,7 +509,8 @@ function renderGroup(rows,bm){const D=state.data;
     `<button class="lg-all" id="gcAll">${allOn?'Şirketleri gizle':'Tüm şirketleri göster'}</button>`;
   $('gcLegend').querySelectorAll('.lg').forEach(b=>b.onclick=()=>{const k=b.dataset.k;state.ghidden.has(k)?state.ghidden.delete(k):state.ghidden.add(k);render()});
   $('gcAll').onclick=()=>{allOn?rows.forEach(x=>state.ghidden.add(x.c.ticker)):rows.forEach(x=>state.ghidden.delete(x.c.ticker));render()};
-  lineChart($('gcChart'),gvis.length?gvis:gser.slice(0,1),{height:300,fmt:v=>nf(0).format(v),tipFmt:v=>`${nf(1).format(v)} (${pct(v-100)})`,endLabels:true});
+  if(gvis.length)lineChart($('gcChart'),gvis,{height:300,fmt:v=>nf(0).format(v),tipFmt:v=>`${nf(1).format(v)} (${pct(v-100)})`,endLabels:true});
+  else $('gcChart').innerHTML='<div class="chart-empty">Tüm çizgiler gizli. Göstermek için yukarıdaki kutucuklardan en az birine tıklayın.</div>';
   const KK=['1D','1M','YTD','1Y'];
   $('gcBody').innerHTML=gser.filter(s=>!state.ghidden.has(s.key)).map(s=>{const r=s.key==='XU100'?xr:rows.find(x=>x.c.ticker===s.key).r;
     return `<tr><td><span style="display:inline-flex;align-items:center;gap:8px"><i style="width:12px;height:3px;border-radius:2px;background:${s.color};display:inline-block"></i>${s.key==='XU100'?'BIST 100':s.name+' · '+rows.find(x=>x.c.ticker===s.key).c.name}</span></td>${KK.map(k=>`<td class="${cls(r[k])}">${pct(r[k])}</td>`).join('')}</tr>`}).join('');
@@ -508,7 +525,7 @@ function renderGroup(rows,bm){const D=state.data;
     return `<td><div class="val-cell"><span>${nf(1).format(v)}x</span>${tag}</div></td>`};
   $('valBody').innerHTML=D.companies.map(c=>`
     <tr data-t="${c.ticker}"><td><div class="cocell">${logo(c,28)}<div><div class="co">${c.name}</div><div class="tk">${c.ticker}</div></div></div></td>
-    <td style="color:var(--text2)">${c.peer_label||'–'} <span class="tk">(${c.peer_count||0} şirket)</span></td>
+    <td style="color:var(--text2)">${c.peer_label||'–'} <span class="tk">(${c.peer_count||0} şirket${c.sector_pe_n!=null?` · F/K: ${c.sector_pe_n}, PD/DD: ${c.sector_pb_n}`:''})</span></td>
     ${vc(c.pe,c.sector_pe)}<td>${c.sector_pe?nf(1).format(c.sector_pe)+'x':'–'}</td>
     ${vc(c.pb,c.sector_pb)}<td>${c.sector_pb?nf(1).format(c.sector_pb)+'x':'–'}</td></tr>`).join('');
   document.querySelectorAll('#tbody tr,#valBody tr,#bars .row').forEach(el=>el.onclick=()=>{location.hash='#sirket/'+el.dataset.t});
@@ -531,7 +548,7 @@ function renderCompany(rows,bm){const D=state.data;const x=rows.find(r=>r.c.tick
         <div class="ch ${cls(chg)}">${chg>0?'+':chg<0?'−':''}${usd?'$'+nf(3).format(Math.abs(chg)):nf(2).format(Math.abs(chg))+' TL'} (${pct(x.r['1D'],2)}) bugün</div></div>
     </div>
     <div class="stats num">
-      <div class="stat"><div class="lab"><span class="hint-term" data-m="mcap">Piyasa değeri</span></div><div class="v">${money(x.mcap)}</div><div class="s">grubun %${nf(1).format(x.mcap/rows.reduce((s,r)=>s+r.mcap,0)*100)}'i</div></div>
+      <div class="stat"><div class="lab"><span class="hint-term" data-m="mcap">Piyasa değeri</span></div><div class="v">${money(x.mcap)}</div><div class="s">grubun %${nf(1).format(x.mcap/rows.reduce((s,r)=>s+r.mcap,0)*100)}${ek(nf(1).format(x.mcap/rows.reduce((s,r)=>s+r.mcap,0)*100))}</div></div>
       <div class="stat"><div class="lab"><span class="hint-term" data-m="pe">F/K</span></div><div class="v">${peText}</div><div class="s">sektör ${c.sector_pe?nf(1).format(c.sector_pe)+'x':'–'}</div></div>
       <div class="stat"><div class="lab"><span class="hint-term" data-m="pb">PD/DD</span></div><div class="v">${pbText}</div><div class="s">sektör ${c.sector_pb?nf(1).format(c.sector_pb)+'x':'–'}</div></div>
       <div class="stat"><div class="lab">52 haftalık aralık (kapanış)</div><div class="range52"><i style="left:${pos}%"></i></div>
@@ -575,8 +592,8 @@ function renderCompany(rows,bm){const D=state.data;const x=rows.find(r=>r.c.tick
       <ol>${mem.map((m,i)=>`<li class="${m[0]===c.ticker?'me':''}" title="${m[1]} · ${money(m[2]/fxNow)}"><span>${i+1}</span><b>${m[0]}</b><em>${m[1]}</em></li>`).join('')}</ol></div></div>`+
     (pidx?`<div class="info" id="info2"><button class="info-btn" aria-expanded="false" aria-controls="pop2">${popIcon}Rakip endeksi (XRAKIP) · ${pm.length} şirket</button>
     <div class="pop" id="pop2" role="dialog" aria-label="Rakip endeksi bileşenleri"><h3>${pidx.name}</h3>
-      <p>Piyasa değeri ağırlıklı, tek şirket en fazla %${Math.round(pidx.cap*100)} · her gün yeniden dengelenir · güncel ağırlıklar</p>
-      ${grpNote}<ol class="one">${pm.map((m,i)=>`<li title="${m[1]}"><span>${i+1}</span><b>${m[0]}</b>${m[4]?`<span class="gtag">${m[4]}</span>`:''}<em>${m[1]}</em><u class="num">${money(m[2]/fxNow)} · %${nf(1).format(m[3]*100)}</u></li>`).join('')}</ol></div></div>`:'');
+      <p>Piyasa değeri ağırlıklı, tek şirket en fazla %${Math.round(pidx.cap*100)} · her gün yeniden dengelenir · yüzdeler son hesaplamada kullanılan ağırlıklardır (bir önceki kapanış piyasa değerine göre)</p>
+      ${pm.length===2?`<p class="gnote"><b>İki rakip:</b> Endekste yalnızca 2 şirket olduğu için %${Math.round(pidx.cap*100)} sınırı uygulanamaz (iki şirketin ağırlık toplamı %100 olmak zorunda). Bu yüzden iki rakip eşit, %50/%50 ağırlıkla girer.</p>`:''}${grpNote}<ol class="one">${pm.map((m,i)=>`<li title="${m[1]}"><span>${i+1}</span><b>${m[0]}</b>${m[4]?`<span class="gtag">${m[4]}</span>`:''}<em>${m[1]}</em><u class="num">${money(m[2]/fxNow)} · %${nf(1).format(m[3]*100)}</u></li>`).join('')}</ol></div></div>`:'');
   document.querySelectorAll('#infoWrap .info').forEach(info=>{const btn=info.querySelector('button');
     btn.onclick=e=>{e.stopPropagation();document.querySelectorAll('#infoWrap .info').forEach(o=>o!==info&&o.classList.remove('open'));const o=info.classList.toggle('open');btn.setAttribute('aria-expanded',o)}});
   // legend as toggles
@@ -592,13 +609,13 @@ function renderCompany(rows,bm){const D=state.data;const x=rows.find(r=>r.c.tick
   const line=(lab,r,color,dash)=>`<tr><td><span style="display:inline-flex;align-items:center;gap:8px"><i style="width:12px;height:3px;border-radius:2px;background:${color};display:inline-block${dash?';background:repeating-linear-gradient(90deg,'+color+' 0 3px,transparent 3px 5px)':''}"></i>${lab}</span></td>${K.map(k=>`<td class="${cls(r[k])}">${pct(r[k])}</td>`).join('')}</tr>`;
   const diff=(lab,r)=>`<tr><td style="font-weight:600">${lab}</td>${K.map(k=>`<td>${relBadge(x.r[k],r&&r[k]).replace(/<\/?div>/g,'')||'–'}</td>`).join('')}</tr>`;
   $('cmpBody').innerHTML=line(c.ticker,x.r,css('--s1'))+line(bmk.name,br,css('--s2'))+(pr?line('Rakip endeksi (XRAKIP)',pr,css('--s4')):'')+line('BIST 100',xr,css('--s3'))+
-    peerSer.filter(s=>!state.hidden.has(s.key)).map((s,i)=>line(`${s.key} · ${D.peers[s.key].name}`,returns(conv(D.peers[s.key].history)),s.color,true)).join('')+
+    peerSer.filter(s=>!state.hidden.has(s.key)).map((s,i)=>{const pl=D.peers[s.key].history.at(-1)[0],old=pl<c.history.at(-1)[0];return line(`${s.key} · ${D.peers[s.key].name}${old?` <span class="asof">(son işlem ${fmtDateTR(pl)})</span>`:''}`,returns(conv(D.peers[s.key].history)),s.color,true)}).join('')+
     diff('Fark (sektöre göre)',br)+(pr?diff('Fark (rakiplere göre)',pr):'');
   // peer market cap bars
   const mrows=[{t:c.ticker,name:c.name,mcap:c.mcap,h:c.history,me:true},...peerList.map(p=>({t:p,name:D.peers[p].name,mcap:D.peers[p].mcap,h:D.peers[p].history}))]
     .filter(r=>r.mcap).map(r=>({...r,mcap:r.mcap/fxNow,ytd:returns(conv(r.h))['YTD']})).sort((a,b)=>b.mcap-a.mcap);
   const mmax=Math.max(...mrows.map(r=>r.mcap));
-  $('mcapHint').textContent=`${c.ticker} ve ${peerList.length} rakibi · güncel piyasa değeri (${usd?'USD':'TL'}) · sağda yılbaşından beri değişim`;
+  $('mcapHint').textContent=`${c.ticker} ve ${peerList.length} rakibi · güncel piyasa değeri (${usd?'USD':'TL'}) · sağda hisse fiyatının yılbaşından beri değişimi`;
   $('mcapBars').innerHTML=mrows.map(r=>`<div class="row ${r.me?'me':''}" title="${r.name}"><div class="co">${r.t}</div>
     <div class="track"><div class="fill" style="width:${Math.max(r.mcap/mmax*82,0.6)}%"></div><span class="lbl">${money(r.mcap)}</span></div>
     <div class="v ${cls(r.ytd)}">${pct(r.ytd)}</div></div>`).join('');
@@ -610,21 +627,24 @@ function renderCompany(rows,bm){const D=state.data;const x=rows.find(r=>r.c.tick
 }
 
 /* ---------- NAV discount ---------- */
+// equity applies from the day the statement was published on KAP (equity_effective); period end only as a fallback
+function effLog(n){const eff=n.equity_effective||{},o={};for(const [k,v] of Object.entries(n.equity_log||{}))o[eff[k]||k]=v;return o}
 function eqAt(logd){const ks=Object.keys(logd).sort();return d=>{let v=null;for(const k of ks){if(k<=d)v=logd[k];else break}return v}}
 function discHist(hist,shares,logd){const at=eqAt(logd);return hist.map(([d,p])=>{const e=at(d);return e?[d,(1-p*shares/e)*100]:null}).filter(Boolean)}
 const NAV_NAMES={ISGSY:'İş Girişim',BULGS:'Bulls Girişim',HDFGS:'Hedef Girişim',VERTU:'Verusatürk Girişim'};
 function renderNav(c,x,NAV){const D=state.data,n=NAV[c.ticker],usd=state.cur==='USD',fxN=usd?(fxAt(c.history.at(-1)[0])||1):1;
   const disc=(1-c.mcap/n.equity)*100;
-  const dh=discHist(c.history,c.shares,n.equity_log);
+  const dh=discHist(c.history,c.shares,effLog(n));
   const at=makeLookup(dh),last=dh.at(-1),d1m=at(baseDate(last[0],'1M')),dytd=at(baseDate(last[0],'YTD'));
   $('navPct').textContent='%'+nf(0).format(disc);
   const chg=(v,lab)=>v==null?'':`<span class="${cls(v-disc)}">${v-disc>=0?'▼ daraldı':'▲ açıldı'} ${nf(1).format(Math.abs(disc-v))} puan</span> ${lab}`;
-  $('navFoot').innerHTML=`${chg(d1m,'son 1 ayda')}${d1m!=null&&dytd!=null?' · ':''}${chg(dytd,'yılbaşından beri')}`;
+  const d0=dytd!=null?null:dh[0];
+  $('navFoot').innerHTML=[chg(d1m,'son 1 ayda'),dytd!=null?chg(dytd,'yılbaşından beri'):(d0&&d0[0]<last[0]?chg(d0[1],`seri başından (${fmtDateTR(d0[0])}) beri`):'')].filter(Boolean).join(' · ');
   const sh=c.history.at(-1)[1];
   $('navParts').innerHTML=`
-    <div>Hisse fiyatı × hisse adedi<small>${money(sh,false)} × ${nf(0).format(c.shares/1e6)} mn adet</small></div><div>${money(c.mcap/fxN)}<small>piyasa değeri, canlı</small></div>
+    <div>Hisse fiyatı × hisse adedi<small>${money(sh/fxN,false)} × ${nf(0).format(c.shares/1e6)} mn adet</small></div><div>${money(c.mcap/fxN)}<small>piyasa değeri, canlı</small></div>
     <div>Bilanço özkaynağı<small>${fmtDateTR(n.equity_date)} tarihli finansal tablo</small></div><div>${money(n.equity/fxN)}<small>= net aktif değer</small></div>
-    <div class="tot">Fark<small>borsanın "görmediği" değer</small></div><div class="tot">${money((n.equity-c.mcap)/fxN)}<small>özkaynağın %${nf(0).format(disc)}'i</small></div>`;
+    <div class="tot">Fark<small>özkaynak ile piyasa değeri arasındaki fark</small></div><div class="tot">${money((n.equity-c.mcap)/fxN)}<small>özkaynağın %${nf(0).format(disc)}${ek(nf(0).format(disc))}</small></div>`;
   // chart
   const peers=[]; // peer discount histories are unreliable (capital increases change share counts); table below shows current values only
   if(state.nvhidden===null)state.nvhidden=new Set(peers);
@@ -638,38 +658,44 @@ function renderNav(c,x,NAV){const D=state.data,n=NAV[c.ticker],usd=state.cur==='
   $('navLegend').querySelectorAll('.lg').forEach(b=>b.onclick=()=>{const k=b.dataset.k;if(k===c.ticker)return;state.nvhidden.has(k)?state.nvhidden.delete(k):state.nvhidden.add(k);render()});
   if($('nvAll'))$('nvAll').onclick=()=>{allOn?peers.forEach(p=>state.nvhidden.add(p)):peers.forEach(p=>state.nvhidden.delete(p));render()};
   lineChart($('navChart'),vis.length?vis:ser.slice(0,1),{height:260,fmt:v=>'%'+nf(0).format(v),tipFmt:v=>'%'+nf(1).format(v)+' iskonto',endLabels:true});
-  const dates=Object.keys(n.equity_log).sort();
-  $('navHint').innerHTML=`Günlük piyasa değeri / o tarihte geçerli son bilanço özkaynağı · bilanço noktaları: ${dates.map(fmtDateTR).join(', ')} · yüksek = daha fazla iskonto`;
+  const dates=Object.keys(n.equity_log).sort(),eff=n.equity_effective||{};
+  $('navHint').innerHTML=`Günlük piyasa değeri / o gün kamuya açıklanmış son bilanço özkaynağı · seri ${dh.length?fmtDateTR(dh[0][0]):'–'} tarihinde başlar (ilk bilançonun geçerli olduğu gün) · bilançolar: ${dates.map(d=>`${fmtDateTR(d)}${eff[d]?` (geçerli: ${fmtDateTR(eff[d])})`:''}`).join(', ')} · yüksek = daha fazla iskonto`;
   // peer table
-  const rows=Object.keys(NAV).filter(t=>NAV[t].equity).map(t=>{const m=NAV[t];const mc=t===c.ticker?c.mcap:(D.peers[t]&&D.peers[t].mcap)||m.mcap;return {t,name:t===c.ticker?c.name:(NAV_NAMES[t]||m.name),mcap:mc,eq:m.equity,disc:(1-mc/m.equity)*100,me:t===c.ticker,logoid:t===c.ticker?c.logoid:(D.peers[t]||{}).logoid}}).sort((a,b)=>b.disc-a.disc);
-  const med=rows.filter(r=>!r.me).map(r=>r.disc).sort((a,b)=>a-b);const medv=med.length?med[(med.length-1)>>1]:null;
-  $('navPeers').innerHTML=rows.map(r=>`<tr class="${r.me?'me':''}" style="${r.me?'background:var(--surface2)':''}"><td><div class="cocell">${logo({ticker:r.t,logoid:r.logoid},24)}<div><div class="co">${r.name}</div><div class="tk">${r.t}</div></div></div></td><td>${money(r.mcap/fxN)}</td><td>${money(r.eq/fxN)}</td><td>${nf(2).format(r.mcap/r.eq)}x</td><td style="font-weight:600;color:var(--down)">%${nf(0).format(r.disc)}</td><td><div class="dbar"><i style="width:${Math.max(0,Math.min(100,r.disc))}%"></i></div></td></tr>`).join('')+
+  const rows=Object.keys(NAV).filter(t=>NAV[t].equity).map(t=>{const m=NAV[t];const mc=t===c.ticker?c.mcap:(D.peers[t]&&D.peers[t].mcap)||m.mcap;return {t,name:t===c.ticker?c.name:(NAV_NAMES[t]||m.name),mcap:mc,eq:m.equity,eqd:m.equity_date,disc:(1-mc/m.equity)*100,me:t===c.ticker,logoid:t===c.ticker?c.logoid:(D.peers[t]||{}).logoid}}).sort((a,b)=>b.disc-a.disc);
+  const medv=median(rows.filter(r=>!r.me).map(r=>r.disc));
+  $('navPeers').innerHTML=rows.map(r=>`<tr class="${r.me?'me':''}" style="${r.me?'background:var(--surface2)':''}"><td><div class="cocell">${logo({ticker:r.t,logoid:r.logoid},24)}<div><div class="co">${r.name}</div><div class="tk">${r.t}</div></div></div></td><td>${money(r.mcap/fxN)}</td><td>${money(r.eq/fxN)}${r.eqd?`<div class="asof">${fmtDateTR(r.eqd)}</div>`:''}</td><td>${nf(2).format(r.mcap/r.eq)}x</td><td style="font-weight:600;color:var(--down)">%${nf(0).format(r.disc)}</td><td><div class="dbar"><i style="width:${Math.max(0,Math.min(100,r.disc))}%"></i></div></td></tr>`).join('')+
     (medv!=null?`<tr><td style="font-weight:600">Emsal medyanı</td><td></td><td></td><td></td><td style="font-weight:600">%${nf(0).format(medv)}</td><td></td></tr>`:'');
 }
 
 /* ---------- Global benchmark ---------- */
 function toUSD(hist){return hist.map(([d,v])=>{const f=fxAt(d.slice(0,10));return [d,f?v/f:null]}).filter(r=>r[1]!=null)}
 function renderGlobal(c,x,bm,G){const D=state.data;
+  // common end date: BIST closes before the US, so compare everything as of the latest day all series have
+  const lastOf=h=>h&&h.length?h.at(-1)[0].slice(0,10):'9999';
+  const ce=[lastOf(c.history),lastOf(G.index.history),lastOf(G.indices.XLP.history),lastOf(G.indices['^GSPC'].history),...G.peers.map(p=>lastOf(p.history_usd))].sort()[0];
+  const cu=h=>cutTo(h,ce);
+  const behind=ce<lastOf(c.history);
+  $('glHint').innerHTML=`Dönem başı = 100 · tüm çizgiler USD · karşılaştırma tarihi ${fmtDateTR(ce)}${behind?' <span class="asof">(ABD/Avrupa kapanışı Türkiye\'den sonra geldiği için tüm seriler ortak son güne göre)</span>':''}`;
   if(state.glhidden===null)state.glhidden=new Set(G.peers.map(p=>p.t));
   const K=['1M','YTD','1Y'];
   const heatCls=v=>{if(v==null)return '';const a=Math.abs(v);const lvl=a<3?1:a<10?2:3;return (v>=0?'u':'d')+lvl};
   const hcell=(r,b)=>K.map(k=>{const v=r[k]!=null&&b[k]!=null?r[k]-b[k]:null;return `<td class="h ${heatCls(v)}"><span>${v==null?'–':(v>=0?'▲ ':'▼ ')+pp(v)}</span></td>`}).join('');
-  const ulTL=returns(c.history),xuTL=returns(D.benchmarks.XU100.history),xgTL=returns(D.benchmarks[c.bench].history);
-  const prow=G.peers.map(p=>{const r=returns(p.history),b=returns(G.indices[p.bench].history);return {p,r,b}});
+  const ulTL=returns(cu(c.history)),xuTL=returns(cu(D.benchmarks.XU100.history)),xgTL=returns(cu(D.benchmarks[c.bench].history));
+  const prow=G.peers.map(p=>{const r=returns(cu(p.history)),b=returns(cu(G.indices[p.bench].history));return {p,r,b}});
   $('heatBody').innerHTML=
     `<tr class="me"><td><div class="cocell">${logo(c,24)}<div><div class="co">Ülker</div><div class="tk">ULKER · Türkiye</div></div></div></td><td style="color:var(--text2)">BIST 100</td>${hcell(ulTL,xuTL)}</tr>`+
     `<tr class="me"><td><div class="cocell"><span style="width:24px"></span><div><div class="co">Ülker</div><div class="tk">sektör endeksine göre</div></div></div></td><td style="color:var(--text2)">BIST Gıda İçecek</td>${hcell(ulTL,xgTL)}</tr>`+
     prow.map(({p,r,b},i)=>`<tr class="${i===0?'sep':''}"><td><div class="cocell">${logo({ticker:p.t,logoid:p.logoid},24)}<div><div class="co">${p.name}</div><div class="tk">${p.t} · ${p.country}</div></div></div></td><td style="color:var(--text2)">${G.indices[p.bench].name}</td>${hcell(r,b)}</tr>`).join('');
   const summ=K.map(k=>{const n=prow.filter(({r,b})=>r[k]!=null&&b[k]!=null&&r[k]<b[k]).length;return [k,n]});
   const lab={'1M':'son 1 ayda','YTD':'yılbaşından beri','1Y':'son 1 yılda'};
-  $('heatSummary').innerHTML='<b>Özet:</b> '+summ.map(([k,n])=>`${lab[k]} ${G.peers.length} global şirketten <b>${n}</b>'i kendi endeksinin gerisinde`).join(' · ')+'.';
+  $('heatSummary').innerHTML='<b>Özet:</b> '+summ.map(([k,n])=>`${lab[k]} <b>${n} / ${G.peers.length}</b> global şirket kendi endeksinin gerisinde`).join(' · ')+`. <span class="asof">Tüm satırlar ${fmtDateTR(ce)} kapanışına göre.</span>`;
   // USD chart
   const GC=['#eda100','#e87ba4','#008300','#e34948','#0a8f9c','#a0522d','#7b5cd6','#5a6b7a'];
-  const ser=[{key:'ULKER',name:'ULKER (USD)',color:css('--s1'),h:sliceRange(toUSD(c.history),state.rangeGL),w:2.2},
-    {key:'XGLOBAL',name:'Global rakip endeksi (XGLOBAL)',color:css('--s4'),h:sliceRange(G.index.history,state.rangeGL),w:2.2},
-    {key:'XLP',name:'S&P 500 Tüketim Malları (XLP)',color:css('--s2'),h:sliceRange(G.indices.XLP.history,state.rangeGL),w:2},
-    {key:'^GSPC',lbl:'S&P 500',name:'S&P 500',color:css('--s3'),h:sliceRange(G.indices['^GSPC'].history,state.rangeGL),w:2},
-    ...G.peers.map((p,i)=>({key:p.t,name:p.t,color:GC[i%8],h:sliceRange(p.history_usd,state.rangeGL),w:1.5,dash:'4 3',peer:true}))]
+  const ser=[{key:'ULKER',name:'ULKER (USD)',color:css('--s1'),h:sliceRange(cu(toUSD(c.history)),state.rangeGL),w:2.2},
+    {key:'XGLOBAL',name:'Global rakip endeksi (XGLOBAL)',color:css('--s4'),h:sliceRange(cu(G.index.history),state.rangeGL),w:2.2},
+    {key:'XLP',lbl:'XLP',name:G.indices.XLP.name||"ABD temel tüketim ETF'i (XLP)",color:css('--s2'),h:sliceRange(cu(G.indices.XLP.history),state.rangeGL),w:2},
+    {key:'^GSPC',lbl:'S&P 500',name:'S&P 500',color:css('--s3'),h:sliceRange(cu(G.indices['^GSPC'].history),state.rangeGL),w:2},
+    ...G.peers.map((p,i)=>({key:p.t,name:p.t,color:GC[i%8],h:sliceRange(cu(p.history_usd),state.rangeGL),w:1.5,dash:'4 3',peer:true}))]
     .map(s=>{const b=s.h[0]?s.h[0][1]:1;return {...s,h:s.h.map(([d,v])=>[d,v/b*100])}});
   const vis=ser.filter(s=>!state.glhidden.has(s.key));
   const allOn=G.peers.every(p=>!state.glhidden.has(p.t));
@@ -681,15 +707,15 @@ function renderGlobal(c,x,bm,G){const D=state.data;
   const gm=G.index.members;
   $('glInfo').innerHTML=`<div class="info" id="info3"><button class="info-btn" aria-expanded="false" aria-controls="pop3">${popIcon}XGLOBAL bileşenleri ve ağırlıkları · ${gm.length} şirket</button>
     <div class="pop" id="pop3" role="dialog" aria-label="XGLOBAL bileşenleri"><h3>Global rakip endeksi (XGLOBAL)</h3>
-      <p>USD bazında, piyasa değeri ağırlıklı, tek şirket en fazla %${Math.round(G.index.cap*100)} · her gün yeniden dengelenir</p>
+      <p>USD bazında, piyasa değeri ağırlıklı, tek şirket en fazla %${Math.round(G.index.cap*100)} · her gün yeniden dengelenir · yüzdeler son hesaplamada kullanılan ağırlıklardır (bir önceki kapanış piyasa değerine göre)</p>
       <ol class="one">${gm.map((m,i)=>`<li title="${m[1]}"><span>${i+1}</span><b>${m[0]}</b><em>${m[1]}</em><u class="num">$${nf(0).format(m[2]/1e9)} mlr · %${nf(1).format(m[3]*100)}</u></li>`).join('')}</ol></div></div>`;
   const i3=$('info3'),b3=i3.querySelector('button');b3.onclick=e=>{e.stopPropagation();const o=i3.classList.toggle('open');b3.setAttribute('aria-expanded',o)};
   document.addEventListener('click',e=>{if(!i3.contains(e.target))i3.classList.remove('open')},{once:true});
   lineChart($('glChart'),vis.length?vis:ser.slice(0,1),{height:300,fmt:v=>nf(0).format(v),tipFmt:v=>`${nf(1).format(v)} (${pct(v-100)})`,endLabels:true});
   const KK=['1D','1M','YTD','1Y'];
-  const rowOf=s=>s.key==='ULKER'?returns(toUSD(c.history)):s.key==='XGLOBAL'?returns(G.index.history):s.peer?returns(G.peers.find(p=>p.t===s.key).history_usd):returns(G.indices[s.key].history);
+  const rowOf=s=>s.key==='ULKER'?returns(cu(toUSD(c.history))):s.key==='XGLOBAL'?returns(cu(G.index.history)):s.peer?returns(cu(G.peers.find(p=>p.t===s.key).history_usd)):returns(cu(G.indices[s.key].history));
   $('glBody').innerHTML=vis.map(s=>`<tr><td><span style="display:inline-flex;align-items:center;gap:8px"><i style="width:12px;height:3px;border-radius:2px;background:${s.color};display:inline-block${s.dash?';background:repeating-linear-gradient(90deg,'+s.color+' 0 3px,transparent 3px 5px)':''}"></i>${s.peer?s.key+' · '+G.peers.find(p=>p.t===s.key).name:s.name}</span></td>${KK.map(k=>`<td class="${cls(rowOf(s)[k])}">${pct(rowOf(s)[k])}</td>`).join('')}</tr>`).join('')+
-    (state.glhidden.has('XGLOBAL')?'':`<tr><td style="font-weight:600">Fark (ULKER − XGLOBAL)</td>${KK.map(k=>{const a=returns(toUSD(c.history))[k],b=returns(G.index.history)[k];return `<td>${relBadge(a,b).replace(/<\/?div>/g,'')||'–'}</td>`}).join('')}</tr>`);
+    (state.glhidden.has('XGLOBAL')?'':`<tr><td style="font-weight:600">Fark (ULKER − XGLOBAL)</td>${KK.map(k=>{const a=returns(cu(toUSD(c.history)))[k],b=returns(cu(G.index.history))[k];return `<td>${relBadge(a,b).replace(/<\/?div>/g,'')||'–'}</td>`}).join('')}</tr>`);
 }
 
 /* ---------- SVG line chart ---------- */
@@ -747,13 +773,14 @@ document.querySelector('[aria-label="Para birimi"]').onclick=e=>{const b=e.targe
 document.addEventListener('click',e=>{const i=$('info');if(i&&!i.contains(e.target)){i.classList.remove('open')}});
 /* ---------- metric explainers ---------- */
 const TERMS={
-  pe:{t:'F/K · Fiyat / Kazanç',p:['Hisse fiyatının, hisse başına yıllık net kâra bölümü. <b>"Kârının kaç katına alınıyor"</b> demek.','<b>Yüksekse:</b> piyasa büyüme bekliyor ya da hisse pahalı. <b>Düşükse:</b> ucuz ya da piyasa kârın kalıcı olmadığını düşünüyor.','Zarar eden şirkette hesaplanamaz, "–" görünür. Tek başına değil, sektörle birlikte okunur.']},
-  spe:{t:'Sektör F/K',p:['Şirketin bağlı olduğu BIST sektör endeksindeki şirketlerin F/K\'sı, piyasa değeri ağırlıklı. Büyük şirketler daha çok etkiler.','Şirket F/K\'sı sektörün <b>altındaysa</b> emsallerine göre ucuz, <b>üstündeyse</b> pahalı fiyatlanıyor demektir.']},
+  pe:{t:'F/K · Fiyat / Kazanç',p:['Hisse fiyatının, hisse başına son 12 aylık net kâra bölümü. <b>"Kârının kaç katına fiyatlanıyor"</b> demek.','Yüksek F/K, piyasanın kârda büyüme beklediğine ya da hissenin kârına göre yüksek fiyatlandığına işaret edebilir; düşük F/K bunun tersine. Tek başına ucuz/pahalı hükmü vermez.','Zarar eden şirkette hesaplanamaz, "–" görünür. Enflasyon muhasebesi (TMS 29) ve tek seferlik kalemler kârı dalgalandırabilir; sektörle birlikte okunur.']},
+  spe:{t:'Sektör F/K',p:['Şirketin bağlı olduğu BIST sektör endeksindeki şirketlerin F/K\'sı, piyasa değeri ağırlıklı. Büyük şirketler daha çok etkiler; yalnızca kâr eden şirketler hesaba girer.','Şirket F/K\'sı sektörün <b>altındaysa</b> kârına göre sektörden daha düşük, <b>üstündeyse</b> daha yüksek çarpanla fiyatlanıyor demektir. Büyüme beklentisi, kâr kalitesi ve iş modeli farkı bunu açıklayabilir.']},
   pb:{t:'PD/DD · Piyasa Değeri / Defter Değeri',p:['Piyasa değerinin, bilançodaki özkaynağa bölümü. <b>"Varlıklarının kaç katına alınıyor"</b> demek.','<b>1\'in altı:</b> piyasa şirkete bilançodaki özkaynağından az değer biçiyor. <b>Yüksekse:</b> marka, büyüme gibi bilançoda görünmeyen değer fiyatlanıyor.','Perakende ve holding gibi sektörlerde doğal olarak farklı seviyelerde olur; sektörle kıyaslanır.']},
-  spb:{t:'Sektör PD/DD',p:['Sektör endeksindeki şirketlerin PD/DD\'si, piyasa değeri ağırlıklı.','Şirket değeri sektörün <b>altındaysa</b> defter değerine göre daha ucuz, <b>üstündeyse</b> daha pahalı fiyatlanıyor.']},
+  spb:{t:'Sektör PD/DD',p:['Sektör endeksindeki şirketlerin PD/DD\'si, piyasa değeri ağırlıklı.','Şirket değeri sektörün <b>altındaysa</b> defter değerine göre sektörden daha düşük, <b>üstündeyse</b> daha yüksek çarpanla fiyatlanıyor demektir. Kârlılık (özkaynak kârlılığı) farkı bunu açıklayabilir.']},
   ev:{t:'FD/FAVÖK · Firma Değeri / FAVÖK',p:['Firma değeri (piyasa değeri + net borç), faiz, vergi ve amortisman öncesi kârın kaç katı. Borcu da hesaba kattığı için F/K\'dan daha adil bir kıyas sağlar.','<b>Düşükse</b> ucuz, <b>yüksekse</b> pahalı ya da güçlü büyüme bekleniyor. Ülkeler arası kıyasta en çok kullanılan çarpandır.']},
-  nav:{t:'Özkaynak = Net aktif değer (NAD)',p:['Yatırım ortaklıkları portföylerindeki şirketleri bilançoda gerçeğe uygun değerle (borsadakiler piyasa fiyatı, diğerleri değerleme raporu) taşır. Bu yüzden bilançodaki toplam özkaynak, portföyün net değeridir.','Çeyrek sonu itibarıyladır; bir sonraki bilançoya kadar sabit kalır.']},
-  disc:{t:'NAD iskontosu',p:['1 − piyasa değeri / özkaynak. Borsanın şirkete, elindeki varlıkların değerinden yüzde kaç daha az fiyat biçtiğini gösterir.','GSYO ve holdinglerde iskonto olağandır (%40-70 yaygın). <b>Daralması</b> olumlu, <b>açılması</b> olumsuz okunur. Emsallerle kıyaslanır.']},
+  nav:{t:'Özkaynak = Net aktif değer (NAD)',p:['Yatırım ortaklıkları portföylerindeki şirketleri bilançoda gerçeğe uygun değerle (borsadakiler piyasa fiyatı, diğerleri değerleme raporu) taşır. Bu yüzden bilançodaki toplam özkaynak, portföyün net değeridir.','Çeyrek sonu itibarıyladır. Grafikte, bilanço KAP\'ta açıklandığı günden bir sonraki bilançonun açıklanmasına kadar kullanılır.']},
+  disc:{t:'NAD iskontosu',p:['1 − piyasa değeri / özkaynak. Piyasa değerinin, bilançodaki net aktif değerin yüzde kaç altında kaldığını gösterir.','GSYO ve holdinglerde iskonto yaygındır. <b>Daralması</b> piyasa değerinin özkaynağa yaklaştığını, <b>açılması</b> uzaklaştığını gösterir. Emsallerle birlikte okunur.']},
+  gmcap:{t:'Grup toplam piyasa değeri',p:['7 şirketin borsa piyasa değerlerinin toplamı (her biri: fiyat × toplam hisse adedi).','Şirketlerin birbirindeki payları (ör. Gözde\'nin ŞOK, Penta ve Makina Takım payları) ayrıca düşülmez; yani bu rakam konsolide bir grup değeri değil, 7 borsa değerinin toplamıdır.']},
   mcap:{t:'Piyasa değeri',p:['Hisse fiyatı × toplam hisse adedi. Borsanın şirketin tamamına biçtiği fiyat.','Hisse adedi sabitken fiyatla birlikte hareket eder. USD görünümünde günün kuruyla çevrilir.']}};
 let termEl=null;
 function showTerm(el){const m=TERMS[el.dataset.m];if(!m)return;hideTerm();termEl=document.createElement('div');termEl.className='term-pop';termEl.setAttribute('role','tooltip');
@@ -778,29 +805,41 @@ function render(){const {rows,bm}=computeRows();renderTape(rows,bm);$('tabSirket
   renderNavNote();}
 function renderNavNote(){const el=$('navNote'),D=state.data;const n=D.nav&&D.nav[state.sel];
   const show=state.page==='sirket'&&n&&n.equity&&!$('navSec').hidden;el.hidden=!show;if(!show)return;
-  const c=co(state.sel),pts=Object.entries(n.equity_log).sort((a,b)=>a[0]<b[0]?-1:1);
+  const c=co(state.sel),pts=Object.entries(n.equity_log).sort((a,b)=>a[0]<b[0]?-1:1),eff=n.equity_effective||{};
   el.innerHTML=`<p><b>NAD iskontosu metodolojisi:</b> Girişim sermayesi yatırım ortaklıkları portföylerindeki şirketleri bilançoda gerçeğe uygun değerle taşır (borsadaki şirketler borsa fiyatıyla, borsada olmayanlar bağımsız değerleme raporuyla). Bu nedenle bilançodaki <b>Toplam Özkaynaklar</b> kalemi net aktif değer (NAD) olarak kullanılır.</p>
   <p><b>Formül:</b> İskonto = 1 − Piyasa değeri / Toplam Özkaynaklar. Piyasa değeri = günlük kapanış fiyatı × ${nf(0).format(c.shares/1e6)} milyon hisse (toplam hisse adedi).</p>
-  <p><b>Veri kaynağı:</b> Toplam Özkaynaklar, ${c.name}'in KAP'ta yayımlanan finansal tablolarından alınır (açıklandığı haliyle, TMS 29 enflasyon düzeltmesi sonrası rakam; sonraki dönemlerde yeniden düzenlenmiş karşılaştırmalı rakamlar kullanılmaz). Kullanılan bilanço noktaları: ${pts.map(([d,v])=>`${fmtDateTR(d)} ${nf(2).format(v/1e9)} mlr TL`).join(' · ')}. Yeni finansal tablo açıklandığında TradingView üzerinden otomatik eklenir. Hisse fiyatı ve emsal GSYO verileri: TradingView.</p>
-  <p><b>Günlük hesap:</b> Her gün, o günün piyasa değeri, dönem sonu tarihi o güne eşit veya önce olan son bilançonun özkaynağına bölünür; yani özkaynak bir sonraki bilançoya kadar sabit kalır, piyasa değeri her gün değişir. Bilanço dönem sonu tarihinden itibaren geçerli sayılır (açıklanma tarihinden değil).</p>
+  <p><b>Veri kaynağı:</b> Toplam Özkaynaklar, ${c.name}'in KAP'ta yayımlanan finansal tablolarından alınır (açıklandığı haliyle, TMS 29 enflasyon düzeltmesi sonrası rakam; sonraki dönemlerde yeniden düzenlenmiş karşılaştırmalı rakamlar kullanılmaz). Kullanılan bilanço noktaları: ${pts.map(([d,v])=>`${fmtDateTR(d)} ${nf(2).format(v/1e9)} mlr TL${eff[d]?` (geçerli: ${fmtDateTR(eff[d])})`:''}`).join(' · ')}. Yeni finansal tablo açıklandığında TradingView üzerinden otomatik eklenir; ilk görüldüğü gün geçerlilik tarihi olarak kaydedilir ve ilk açıklanan rakam sonradan değişmez. Hisse fiyatı ve emsal GSYO verileri: TradingView.</p>
+  <p><b>Günlük hesap:</b> Her gün, o günün piyasa değeri, <b>o güne kadar KAP'ta açıklanmış</b> son bilançonun özkaynağına bölünür; özkaynak bir sonraki bilanço açıklanana kadar sabit kalır, piyasa değeri her gün değişir. Böylece grafikteki her gün, o gün piyasanın bildiği bilgiyle hesaplanır. Akşam (seans sonrası) açıklanan bilanço ertesi işlem gününden itibaren kullanılır. 31.12.2025 bilançosunun açıklanma saati bulunamadığı için ihtiyatlı olarak SPK'nın yasal son tarihinin ertesi işlem günü (03.03.2026) kullanılmıştır. 30.09.2025 bilançosunun açıklandığı haliyle rakamı bulunamadığından seri 03.03.2026'da başlar.</p>
   <p><b>Bilinmesi gerekenler:</b> Bilançodaki portföy değeri dönem sonu itibarıyladır; borsadaki iştiraklerin (ŞOK %23,66, Penta %32,21, Makina Takım %14,60) fiyatı sonrasında değişse de bir sonraki bilançoya kadar yansımaz. Borsada olmayan iştiraklerin (Polinas, FLO, Türkiye Finans, Azmüsebat, Gözde Tech Ventures) değeri değerleme raporuna dayanır. Emsal GSYO tablosunda her şirketin kendi son bilançosu kullanılır.</p>`;}
 addEventListener('hashchange',route);
 let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>state.data&&render(),150)});
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>state.data&&render());
 
+function applyData(D){state.data=D;fxAt=makeLookup(D.fx.history.concat([[new Date().toISOString().slice(0,10),D.fx.last]]));}
+function renderMeta(){const D=state.data;const up=new Date(D.updated_at),lastBar=D.companies[0].history.at(-1)[0];
+  $('updated').textContent=`Son güncelleme: ${up.toLocaleString('tr-TR',{timeZone:'Europe/Istanbul',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})} · son işlem günü ${fmtDateTR(lastBar)}`;
+  $('srcline').textContent='Veriler ~15 dk gecikmeli · hafta içi yarım saatte bir güncellenir';
+  const st=staleInfo(up.getTime(),Date.now()),w=$('stale');
+  if(st){w.style.display='block';w.textContent=`Veriler ${st.hours<48?Math.round(st.hours)+' saattir':Math.round(st.hours/24)+' gündür'} güncellenmedi; en az iki otomatik güncelleme atlanmış görünüyor. Gösterilen rakamlar son başarılı güncellemeye aittir.`}else w.style.display='none';
+  const dw=$('dwarn'),ws=D.warnings||[];
+  if(ws.length){dw.style.display='block';dw.innerHTML=`<summary>Son güncellemede ${ws.length} veri kalemi alınamadı; bu kalemlerde bir önceki değer gösteriliyor.</summary><ul>${ws.map(x=>`<li>${String(x).replace(/[<>&]/g,ch=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[ch]))}</li>`).join('')}</ul>`}else{dw.style.display='none';dw.innerHTML=''}}
+let lastCheck=Date.now();
+function refresh(){lastCheck=Date.now();
+  fetch('data.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(D=>{
+    if(!state.data||D.updated_at===state.data.updated_at){renderMeta();return}
+    const y=scrollY;applyData(D);renderMeta();render();scrollTo({top:y});
+  }).catch(e=>console.warn('refresh failed',e));}
+setInterval(()=>{if(!document.hidden)refresh()},10*6e4);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastCheck>10*6e4)refresh()});
 fetch('data.json?t='+Date.now()).then(r=>r.json()).then(D=>{
-  state.data=D;fxAt=makeLookup(D.fx.history.concat([[new Date().toISOString().slice(0,10),D.fx.last]]));
+  applyData(D);
   seg('rangeG','rangeG',[['1H','1H'],['1M','1A'],['YTD','YB'],['1Y','1Y']]);
   seg('rangeP','rangeP',[['1H','1H'],['1M','1A'],['YTD','YB'],['1Y','1Y']]);
   seg('rangeC','rangeC',[['1M','1A'],['YTD','YB'],['1Y','1Y']]);
   seg('rangeGC','rangeGC',[['1M','1A'],['YTD','YB'],['1Y','1Y']]);
   seg('rangeGL','rangeGL',[['1M','1A'],['YTD','YB'],['1Y','1Y']]);
   seg('rangeNV','rangeNV',[['1M','1A'],['YTD','YB'],['1Y','1Y']]);
-  const up=new Date(D.updated_at),lastBar=D.companies[0].history.at(-1)[0];
-  $('updated').textContent=`Son güncelleme: ${up.toLocaleString('tr-TR',{timeZone:'Europe/Istanbul',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})} · son işlem günü ${fmtDateTR(lastBar)}`;
-  $('srcline').textContent='Veriler ~15 dk gecikmeli · borsa açıkken saatte bir güncellenir';
-  const ageH=(Date.now()-up.getTime())/36e5,wd=new Date().getDay();
-  if(ageH>26&&wd>=2&&wd<=5){const w=$('stale');w.style.display='block';w.textContent=`Veriler ${Math.round(ageH)} saattir güncellenmedi. Otomatik güncelleme çalışmamış olabilir.`}
+  renderMeta();
   route();
 }).catch(e=>{document.querySelector('.wrap').innerHTML='<div class="err">Veri yüklenemedi. Lütfen sayfayı yenileyin.</div>';console.error(e)});
 </script>
