@@ -86,8 +86,17 @@ h2{font-size:15px;margin:0 0 2px;font-weight:600}
 .logo img.ok{opacity:1;background:#fff}
 .top .logo{background:#24395c;color:#cfd9e8}
 /* ---------- tables ---------- */
-.tbl-wrap{overflow-x:auto;margin:0 -18px;padding:0 18px}
-table{width:100%;border-collapse:collapse}
+.tbl-wrap{overflow-x:auto;margin:0 -18px;padding:0;-webkit-overflow-scrolling:touch}
+.tbl-wrap th:first-child,.tbl-wrap td:first-child{padding-left:18px}
+.tbl-wrap th:last-child,.tbl-wrap td:last-child{padding-right:18px}
+/* frozen first column (like Excel freeze panes): company/label stays visible while the rest scrolls */
+.tbl-wrap th:first-child,.tbl-wrap td:first-child{position:sticky;left:0;z-index:2;background:var(--surface)}
+.tbl-wrap tr.me td:first-child{background:var(--surface2)}
+.tbl-wrap.sc th:first-child,.tbl-wrap.sc td:first-child{box-shadow:8px 0 8px -8px rgba(0,0,0,.28)}
+.tbl-wrap.more{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 28px),rgba(0,0,0,.25));mask-image:linear-gradient(to right,#000 calc(100% - 28px),rgba(0,0,0,.25))}
+.scroll-hint{display:none;font-size:11.5px;color:var(--muted);margin:2px 0 6px}
+.tbl-wrap.more+.scroll-hint{display:block}
+table{width:100%;border-collapse:separate;border-spacing:0}
 th{font-size:11.5px;font-weight:600;color:var(--text2);text-align:right;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
 td{padding:10px;border-bottom:1px solid var(--grid);text-align:right;white-space:nowrap;vertical-align:middle}
@@ -207,7 +216,7 @@ tr.me .dbar i{opacity:1}
 .err{padding:40px;text-align:center;color:var(--text2)}
 [hidden]{display:none!important}
 @media (max-width:960px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:14px}.stat{padding:0 12px 0 0;border-left:0}}
-@media (max-width:620px){.top-inner{gap:0 16px}.tabs{order:3;width:100%;margin:0 -14px}.tabs a{padding:10px 14px}.hero{grid-template-columns:1fr}.hero-price{text-align:left}.kpi .val{font-size:21px}.pop ol{grid-template-columns:1fr}}
+@media (max-width:620px){.tbl-wrap td:first-child{white-space:normal;max-width:156px;min-width:140px}.tbl-wrap td:first-child .cocell{gap:8px}.tbl-wrap .logo{--s:26px!important}.tbl-wrap td:first-child .co{line-height:1.25}.tbl-wrap td:first-child .tk{white-space:nowrap;font-size:11px}.top-inner{gap:0 16px}.tabs{order:3;width:100%;margin:0 -14px}.tabs a{padding:10px 14px}.hero{grid-template-columns:1fr}.hero-price{text-align:left}.kpi .val{font-size:21px}.pop ol{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -246,6 +255,7 @@ tr.me .dbar i{opacity:1}
           <tbody id="tbody" class="click"></tbody>
         </table>
       </div>
+      <div class="scroll-hint">Diğer sütunlar için yana kaydırın · ilk sütun sabit</div>
     </div>
 
     <div class="card mt">
@@ -261,6 +271,7 @@ tr.me .dbar i{opacity:1}
           <tbody id="gcBody"></tbody>
         </table>
       </div>
+      <div class="scroll-hint">Diğer sütunlar için yana kaydırın · ilk sütun sabit</div>
     </div>
 
     <div class="grid2">
@@ -287,6 +298,7 @@ tr.me .dbar i{opacity:1}
           <tbody id="valBody" class="click"></tbody>
         </table>
       </div>
+      <div class="scroll-hint">Diğer sütunlar için yana kaydırın · ilk sütun sabit</div>
     </div>
   </section>
 
@@ -321,6 +333,7 @@ tr.me .dbar i{opacity:1}
           <tbody id="cmpBody"></tbody>
         </table>
       </div>
+      <div class="scroll-hint">Diğer sütunlar için yana kaydırın · ilk sütun sabit</div>
     </div>
 
     <div class="card mt">
@@ -358,6 +371,7 @@ tr.me .dbar i{opacity:1}
             <tbody id="navPeers"></tbody>
           </table>
         </div>
+        <div class="scroll-hint">Diğer sütunlar için yana kaydırın · ilk sütun sabit</div>
       </div>
     </section>
 
@@ -373,6 +387,7 @@ tr.me .dbar i{opacity:1}
             <tbody id="heatBody"></tbody>
           </table>
         </div>
+        <div class="scroll-hint">Diğer sütunlar için yana kaydırın · ilk sütun sabit</div>
         <p class="hint" id="heatSummary" style="margin:12px 0 0"></p>
       </div>
 
@@ -390,6 +405,7 @@ tr.me .dbar i{opacity:1}
             <tbody id="glBody"></tbody>
           </table>
         </div>
+        <div class="scroll-hint">Diğer sütunlar için yana kaydırın · ilk sütun sabit</div>
       </div>
     </section>
   </section>
@@ -800,9 +816,12 @@ function route(){const h=decodeURIComponent(location.hash.slice(1));const [p,t]=
   document.querySelectorAll('.tabs a').forEach(a=>a.dataset.page===state.page?a.setAttribute('aria-current','page'):a.removeAttribute('aria-current'));
   $('page-grup').hidden=state.page!=='grup';$('page-sirket').hidden=state.page!=='sirket';
   if(state.data){render();if(p)window.scrollTo({top:0})}}
+function updWrap(w){const max=w.scrollWidth-w.clientWidth;w.classList.toggle('sc',w.scrollLeft>2);w.classList.toggle('more',max>2&&w.scrollLeft<max-2)}
+function updWraps(){document.querySelectorAll('.tbl-wrap').forEach(updWrap)}
+document.addEventListener('scroll',e=>{const w=e.target;if(w&&w.classList&&w.classList.contains('tbl-wrap'))updWrap(w)},true);
 function render(){const {rows,bm}=computeRows();renderTape(rows,bm);$('tabSirket').href='#sirket/'+state.sel;
   if(state.page==='grup')renderGroup(rows,bm);else renderCompany(rows,bm);
-  renderNavNote();}
+  renderNavNote();updWraps();}
 function renderNavNote(){const el=$('navNote'),D=state.data;const n=D.nav&&D.nav[state.sel];
   const show=state.page==='sirket'&&n&&n.equity&&!$('navSec').hidden;el.hidden=!show;if(!show)return;
   const c=co(state.sel),pts=Object.entries(n.equity_log).sort((a,b)=>a[0]<b[0]?-1:1),eff=n.equity_effective||{};
