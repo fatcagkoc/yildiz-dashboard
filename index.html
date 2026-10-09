@@ -207,6 +207,16 @@ tr.me .dbar i{opacity:1}
 .pop li.me{background:var(--up-bg)}
 .cmp-tbl td,.cmp-tbl th{padding:7px 10px}
 .notes{margin-top:18px;color:var(--muted);font-size:12px;line-height:1.6}
+.notes-h{font-size:12px;font-weight:600;color:var(--text2);margin:0 0 4px}
+/* collapsible notes: ~3 lines visible, fade, expand button */
+.notes-body{max-height:5.8em;overflow:hidden;-webkit-mask-image:linear-gradient(#000 45%,transparent);mask-image:linear-gradient(#000 45%,transparent)}
+.notes.open .notes-body,.notes.fits .notes-body{max-height:none;-webkit-mask-image:none;mask-image:none}
+.notes.fits .notes-more{display:none}
+.notes-more{display:inline-flex;align-items:center;gap:4px;margin:6px 0 2px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--text2);font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.notes-more:hover{background:var(--surface2)}
+.notes-more svg{width:12px;height:12px;transition:transform .2s}
+.notes.open .notes-more svg{transform:rotate(180deg)}
+.notes-disc{margin:6px 0 0}
 .notes p{margin:0 0 4px}
 .warn{display:none;margin-bottom:12px;padding:10px 12px;border-radius:8px;background:var(--down-bg);color:var(--down);font-size:13px}
 .dwarn{display:none;margin-bottom:12px;padding:8px 12px;border-radius:8px;background:var(--surface2);color:var(--text2);font-size:12.5px}
@@ -410,12 +420,17 @@ tr.me .dbar i{opacity:1}
     </section>
   </section>
 
-  <div class="notes">
+  <div class="notes" id="notes">
+    <p class="notes-h">Kaynaklar ve yöntem</p>
+    <div class="notes-body" id="notesBody">
     <p><b>Kaynaklar:</b> Fiyat, endeks geçmişi, endeks bileşenleri, piyasa değeri, F/K ve PD/DD: TradingView. USD/TRY: TradingView ve Yahoo Finance. Veriler yaklaşık 15 dakika gecikmelidir; hafta içi 10:20–18:50 arasında yarım saatte bir güncellenir (18:50 güncellemesi günün kapanışını alır). Açık sayfa yeni veriyi 10 dakikada bir kendiliğinden çeker.</p>
     <p><b>Sektör endeksleri:</b> ULKER, BESLR → BIST Gıda İçecek (XGIDA) · SOKM, BIZIM → BIST Ticaret (XTCRT) · GOZDE → BIST Mali (XUMAL) · PENTA → BIST Teknoloji (XUTEK) · MAKTK → BIST Metal Eşya Makina (XMESY). Genel karşılaştırma: BIST 100. GOZDE'nin değerleme karşılaştırmasında bankalar hariç tutulur.</p>
     <p><b>Rakip endeksi (XRAKIP):</b> Her şirket için borsadaki doğrudan rakiplerinden hesaplanan, piyasa değeri ağırlıklı fiyat endeksi. Tek şirketin (ya da aynı gruba ait şirketlerin toplamının) ağırlığı en fazla %40 ile sınırlıdır, ağırlıklar her gün yeniden hesaplanır. Ağırlıklar bir önceki kapanıştaki piyasa değerine göre belirlenir. Bir rakip o gün işlem görmediyse (tatil, işlem durdurma) son fiyatıyla tutulur, hareketi ilk işlem gününde endekse yansır; 30 günden uzun süre işlem görmeyen rakip, yeniden işlem görene kadar endeks dışında kalır. Yalnızca 2 rakibi olan şirkette (Makina Takım) %40 sınırı matematiksel olarak uygulanamaz; iki rakip eşit (%50/%50) ağırlıkla girer. ŞOK ve Bizim Toptan aynı gıda perakende rakip endeksini kullanır. Resmi bir BIST endeksi değildir; rakip listeleri Yıldız Holding strateji ekibince belirlenmiştir.</p>
     <div id="navNote" hidden></div>
-    <p><b>Fiyatlar</b> bedelsiz sermaye artırımı ve bölünmelere göre düzeltilmiştir. <b>Geçmiş piyasa değerleri</b> (grup toplamı grafiği ve endeks ağırlıkları) bugünkü hisse adediyle hesaplanır; geçmişteki bedelli sermaye artırımları ayrıca dikkate alınmaz. <b>USD görünümü:</b> her günün fiyatı o günün USD/TRY kuruyla çevrilir. Bilgi amaçlıdır, yatırım tavsiyesi değildir.</p>
+    <p><b>Fiyatlar</b> bedelsiz sermaye artırımı ve bölünmelere göre düzeltilmiştir. <b>Geçmiş piyasa değerleri</b> (grup toplamı grafiği ve endeks ağırlıkları) bugünkü hisse adediyle hesaplanır; geçmişteki bedelli sermaye artırımları ayrıca dikkate alınmaz. <b>USD görünümü:</b> her günün fiyatı o günün USD/TRY kuruyla çevrilir.</p>
+    </div>
+    <button class="notes-more" id="notesMore" aria-expanded="false" aria-controls="notesBody"><span>Tüm açıklamaları göster</span><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2.5 4.5 6 8l3.5-3.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <p class="notes-disc">Bilgi amaçlıdır, yatırım tavsiyesi değildir.</p>
   </div>
 </main>
 
@@ -817,7 +832,10 @@ function route(){const h=decodeURIComponent(location.hash.slice(1));const [p,t]=
   $('page-grup').hidden=state.page!=='grup';$('page-sirket').hidden=state.page!=='sirket';
   if(state.data){render();if(p)window.scrollTo({top:0})}}
 function updWrap(w){const max=w.scrollWidth-w.clientWidth;w.classList.toggle('sc',w.scrollLeft>2);w.classList.toggle('more',max>2&&w.scrollLeft<max-2)}
-function updWraps(){document.querySelectorAll('.tbl-wrap').forEach(updWrap)}
+function updWraps(){document.querySelectorAll('.tbl-wrap').forEach(updWrap);updNotes()}
+function updNotes(){const n=$('notes'),b=$('notesBody');if(!n||n.classList.contains('open'))return;$('notesMore').querySelector('span').textContent='Tüm açıklamaları göster'+($('navNote').hidden?'':' (NAD metodolojisi dahil)');n.classList.remove('fits');if(b.scrollHeight<=b.clientHeight+4)n.classList.add('fits')}
+$('notesMore').onclick=()=>{const n=$('notes'),o=n.classList.toggle('open');$('notesMore').setAttribute('aria-expanded',o);
+  $('notesMore').querySelector('span').textContent=o?'Daralt':'Tüm açıklamaları göster';if(!o)n.scrollIntoView({block:'nearest'})};
 document.addEventListener('scroll',e=>{const w=e.target;if(w&&w.classList&&w.classList.contains('tbl-wrap'))updWrap(w)},true);
 function render(){const {rows,bm}=computeRows();renderTape(rows,bm);$('tabSirket').href='#sirket/'+state.sel;
   if(state.page==='grup')renderGroup(rows,bm);else renderCompany(rows,bm);
