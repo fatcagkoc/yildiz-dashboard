@@ -148,6 +148,8 @@ tr.me .dbar i{opacity:1}
 .term-pop p{margin:0 0 6px;color:var(--text2)}.term-pop p:last-child{margin:0}
 .term-pop b{color:var(--text)}
 .pop li u{text-decoration:none;color:var(--text2);margin-left:auto;font-size:11.5px;white-space:nowrap}
+.pop .gnote{margin:0 0 8px;padding:8px 10px;background:var(--surface2);border-radius:8px;color:var(--text2);font-size:12px;line-height:1.45}
+.gtag{flex:none;display:inline-block;font-size:10.5px;font-weight:600;color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);padding:0 6px;border-radius:999px;margin-left:4px}
 .bars.mbars .row{grid-template-columns:64px 1fr 72px}
 .bars.mbars .track{position:relative;height:18px;display:flex;align-items:center}
 .bars.mbars .fill{background:var(--muted);opacity:.55;border-radius:0 4px 4px 0;height:100%;flex:none}
@@ -384,24 +386,14 @@ tr.me .dbar i{opacity:1}
           </table>
         </div>
       </div>
-
-      <div class="card mt">
-        <h2>Değerleme: Ülker ve global emsaller</h2>
-        <p class="hint">Piyasa değerleri USD. Global şirketlerin çarpanları genelde daha yüksektir; farkın bir kısmı Türkiye risk primidir, şirketle ilgili değildir.</p>
-        <div class="tbl-wrap">
-          <table class="num">
-            <thead><tr><th>Şirket</th><th>Ülke</th><th><span class="hint-term" data-m="mcap">Piyasa değeri</span></th><th><span class="hint-term" data-m="pe">F/K</span></th><th><span class="hint-term" data-m="pb">PD/DD</span></th><th><span class="hint-term" data-m="ev">FD/FAVÖK</span></th></tr></thead>
-            <tbody id="glValBody"></tbody>
-          </table>
-        </div>
-      </div>
     </section>
   </section>
 
   <div class="notes">
     <p><b>Kaynaklar:</b> Fiyat, endeks geçmişi, endeks bileşenleri, piyasa değeri, F/K ve PD/DD: TradingView. USD/TRY: TradingView ve Yahoo Finance. Veriler yaklaşık 15 dakika gecikmelidir; borsa açıkken hafta içi saatte bir güncellenir.</p>
     <p><b>Sektör endeksleri:</b> ULKER, BESLR → BIST Gıda İçecek (XGIDA) · SOKM, BIZIM → BIST Ticaret (XTCRT) · GOZDE → BIST Mali (XUMAL) · PENTA → BIST Teknoloji (XUTEK) · MAKTK → BIST Metal Eşya Makina (XMESY). Genel karşılaştırma: BIST 100. GOZDE'nin değerleme karşılaştırmasında bankalar hariç tutulur.</p>
-    <p><b>Rakip endeksi (XRAKIP):</b> Her şirket için borsadaki doğrudan rakiplerinden hesaplanan, piyasa değeri ağırlıklı fiyat endeksi. Tek şirketin ağırlığı en fazla %40 ile sınırlıdır, ağırlıklar her gün yeniden hesaplanır. Resmi bir BIST endeksi değildir; rakip listeleri Yıldız Holding strateji ekibince belirlenmiştir.</p>
+    <p><b>Rakip endeksi (XRAKIP):</b> Her şirket için borsadaki doğrudan rakiplerinden hesaplanan, piyasa değeri ağırlıklı fiyat endeksi. Tek şirketin (ya da aynı gruba ait şirketlerin toplamının) ağırlığı en fazla %40 ile sınırlıdır, ağırlıklar her gün yeniden hesaplanır. Bir rakip o gün işlem görmediyse (tatil, işlem durdurma) son fiyatıyla tutulur, hareketi ilk işlem gününde endekse yansır. ŞOK ve Bizim Toptan aynı gıda perakende rakip endeksini kullanır. Resmi bir BIST endeksi değildir; rakip listeleri Yıldız Holding strateji ekibince belirlenmiştir.</p>
+    <div id="navNote" hidden></div>
     <p><b>Fiyatlar</b> bedelsiz sermaye artırımı ve bölünmelere göre düzeltilmiştir. <b>USD görünümü:</b> her günün fiyatı o günün USD/TRY kuruyla çevrilir. Bilgi amaçlıdır, yatırım tavsiyesi değildir.</p>
   </div>
 </main>
@@ -420,7 +412,9 @@ function makeLookup(hist){const d=hist.map(r=>r[0]),v=hist.map(r=>r[1]);
 let fxAt=null;
 function conv(hist){if(state.cur==='TRY')return hist;
   return hist.map(([d,v])=>{const f=fxAt(d.slice(0,10));return [d,f?v/f:null]}).filter(r=>r[1]!=null);}
-function shiftDate(iso,{m=0,d=0}){const x=new Date(iso.slice(0,10)+'T00:00:00Z');x.setUTCMonth(x.getUTCMonth()-m);x.setUTCDate(x.getUTCDate()-d);return x.toISOString().slice(0,10)}
+function shiftDate(iso,{m=0,d=0}){ // month-safe: 31 Mar −1 ay = 28/29 Şub (not 3 Mar)
+  const [y,mo,da]=iso.slice(0,10).split('-').map(Number);let M=mo-1-m,Y=y+Math.floor(M/12);M=((M%12)+12)%12;
+  const dim=new Date(Date.UTC(Y,M+1,0)).getUTCDate();const x=new Date(Date.UTC(Y,M,Math.min(da,dim)));x.setUTCDate(x.getUTCDate()-d);return x.toISOString().slice(0,10)}
 function baseDate(last,k){if(k==='1H')return shiftDate(last,{d:7});if(k==='1M')return shiftDate(last,{m:1});if(k==='1Y')return shiftDate(last,{m:12});if(k==='YTD')return (+last.slice(0,4)-1)+'-12-31'}
 function returns(hist){if(!hist||hist.length<2)return {};const last=hist.at(-1),at=makeLookup(hist),r={};
   r['1D']=(last[1]/hist.at(-2)[1]-1)*100;
@@ -572,6 +566,8 @@ function renderCompany(rows,bm){const D=state.data;const x=rows.find(r=>r.c.tick
   $('cmpHint').textContent=`Dönem başı = 100 · ${usd?'USD bazında':'TL bazında'} · çizgileri açıp kapatmak için tıklayın`;
   const mem=bmk.members||[],pm=pidx?pidx.members:[];
   const fxNow=usd?(fxAt(x.h.at(-1)[0].slice(0,10))||1):1;
+  const grps=pidx&&pidx.groups?Object.entries(pidx.groups):[];
+  const grpNote=grps.map(([g,ms])=>`<p class="gnote"><b>${g}:</b> ${ms.join(', ')} aynı gruba ait olduğu için endekste tek şirket gibi sayılır; ${ms.length} şirketin toplam ağırlığı en fazla %${Math.round(pidx.cap*100)} ile sınırlıdır. Grup içinde ağırlık piyasa değerine göre bölünür. Bu yüzden diğer şirketlerin payı artar.</p>`).join('');
   const popIcon=`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6.5"/><path d="M8 7.2v4M8 4.8v.1" stroke-linecap="round"/></svg>`;
   $('infoWrap').innerHTML=`<div class="info" id="info"><button class="info-btn" aria-expanded="false" aria-controls="pop">${popIcon}${c.bench} endeksindeki şirketler · ${mem.length}</button>
     <div class="pop" id="pop" role="dialog" aria-label="${bmk.name} bileşenleri"><h3>${bmk.name} (${c.bench})</h3>
@@ -580,7 +576,7 @@ function renderCompany(rows,bm){const D=state.data;const x=rows.find(r=>r.c.tick
     (pidx?`<div class="info" id="info2"><button class="info-btn" aria-expanded="false" aria-controls="pop2">${popIcon}Rakip endeksi (XRAKIP) · ${pm.length} şirket</button>
     <div class="pop" id="pop2" role="dialog" aria-label="Rakip endeksi bileşenleri"><h3>${pidx.name}</h3>
       <p>Piyasa değeri ağırlıklı, tek şirket en fazla %${Math.round(pidx.cap*100)} · her gün yeniden dengelenir · güncel ağırlıklar</p>
-      <ol class="one">${pm.map((m,i)=>`<li title="${m[1]}"><span>${i+1}</span><b>${m[0]}</b><em>${m[1]}</em><u class="num">${money(m[2]/fxNow)} · %${nf(1).format(m[3]*100)}</u></li>`).join('')}</ol></div></div>`:'');
+      ${grpNote}<ol class="one">${pm.map((m,i)=>`<li title="${m[1]}"><span>${i+1}</span><b>${m[0]}</b>${m[4]?`<span class="gtag">${m[4]}</span>`:''}<em>${m[1]}</em><u class="num">${money(m[2]/fxNow)} · %${nf(1).format(m[3]*100)}</u></li>`).join('')}</ol></div></div>`:'');
   document.querySelectorAll('#infoWrap .info').forEach(info=>{const btn=info.querySelector('button');
     btn.onclick=e=>{e.stopPropagation();document.querySelectorAll('#infoWrap .info').forEach(o=>o!==info&&o.classList.remove('open'));const o=info.classList.toggle('open');btn.setAttribute('aria-expanded',o)}});
   // legend as toggles
@@ -672,7 +668,7 @@ function renderGlobal(c,x,bm,G){const D=state.data;
   const ser=[{key:'ULKER',name:'ULKER (USD)',color:css('--s1'),h:sliceRange(toUSD(c.history),state.rangeGL),w:2.2},
     {key:'XGLOBAL',name:'Global rakip endeksi (XGLOBAL)',color:css('--s4'),h:sliceRange(G.index.history,state.rangeGL),w:2.2},
     {key:'XLP',name:'S&P 500 Tüketim Malları (XLP)',color:css('--s2'),h:sliceRange(G.indices.XLP.history,state.rangeGL),w:2},
-    {key:'^GSPC',name:'S&P 500',color:css('--s3'),h:sliceRange(G.indices['^GSPC'].history,state.rangeGL),w:2},
+    {key:'^GSPC',lbl:'S&P 500',name:'S&P 500',color:css('--s3'),h:sliceRange(G.indices['^GSPC'].history,state.rangeGL),w:2},
     ...G.peers.map((p,i)=>({key:p.t,name:p.t,color:GC[i%8],h:sliceRange(p.history_usd,state.rangeGL),w:1.5,dash:'4 3',peer:true}))]
     .map(s=>{const b=s.h[0]?s.h[0][1]:1;return {...s,h:s.h.map(([d,v])=>[d,v/b*100])}});
   const vis=ser.filter(s=>!state.glhidden.has(s.key));
@@ -694,16 +690,6 @@ function renderGlobal(c,x,bm,G){const D=state.data;
   const rowOf=s=>s.key==='ULKER'?returns(toUSD(c.history)):s.key==='XGLOBAL'?returns(G.index.history):s.peer?returns(G.peers.find(p=>p.t===s.key).history_usd):returns(G.indices[s.key].history);
   $('glBody').innerHTML=vis.map(s=>`<tr><td><span style="display:inline-flex;align-items:center;gap:8px"><i style="width:12px;height:3px;border-radius:2px;background:${s.color};display:inline-block${s.dash?';background:repeating-linear-gradient(90deg,'+s.color+' 0 3px,transparent 3px 5px)':''}"></i>${s.peer?s.key+' · '+G.peers.find(p=>p.t===s.key).name:s.name}</span></td>${KK.map(k=>`<td class="${cls(rowOf(s)[k])}">${pct(rowOf(s)[k])}</td>`).join('')}</tr>`).join('')+
     (state.glhidden.has('XGLOBAL')?'':`<tr><td style="font-weight:600">Fark (ULKER − XGLOBAL)</td>${KK.map(k=>{const a=returns(toUSD(c.history))[k],b=returns(G.index.history)[k];return `<td>${relBadge(a,b).replace(/<\/?div>/g,'')||'–'}</td>`}).join('')}</tr>`);
-  // valuation
-  const usdM=v=>v==null?'–':'$'+(v>=1e9?nf(v>=1e11?0:1).format(v/1e9)+' mlr':nf(0).format(v/1e6)+' mn');
-  const mx=v=>v==null?'–':nf(1).format(v)+'x';
-  const ulUsd=c.mcap/(fxAt(c.history.at(-1)[0])||D.fx.last);
-  const vrows=[{t:'ULKER',name:'Ülker Bisküvi',country:'Türkiye',mcap:ulUsd,pe:c.pe,pb:c.pb,ev:c.ev_ebitda,me:true,logoid:c.logoid},
-    ...G.peers.map(p=>({t:p.t,name:p.name,country:p.country,mcap:p.mcap_usd,pe:p.pe,pb:p.pb,ev:p.ev_ebitda,logoid:p.logoid}))];
-  const med=a=>{const v=a.filter(x=>x!=null).sort((x,y)=>x-y);return v.length?v[(v.length-1)>>1]:null};
-  const pm=med(G.peers.map(p=>p.pe)),bmd=med(G.peers.map(p=>p.pb)),em=med(G.peers.map(p=>p.ev_ebitda));
-  $('glValBody').innerHTML=vrows.map(r=>`<tr class="${r.me?'me':''}" style="${r.me?'background:var(--surface2)':''}"><td><div class="cocell">${logo({ticker:r.t,logoid:r.logoid},24)}<div><div class="co">${r.name}</div><div class="tk">${r.t}</div></div></div></td><td style="color:var(--text2)">${r.country}</td><td>${usdM(r.mcap)}</td><td>${mx(r.pe)}</td><td>${mx(r.pb)}</td><td>${mx(r.ev)}</td></tr>`).join('')+
-    `<tr><td style="font-weight:600">Global emsal medyanı</td><td></td><td></td><td style="font-weight:600">${mx(pm)}</td><td style="font-weight:600">${mx(bmd)}</td><td style="font-weight:600">${mx(em)}</td></tr>`;
 }
 
 /* ---------- SVG line chart ---------- */
@@ -728,7 +714,7 @@ function lineChart(el,series,o){
     if(o.area){const f=se.h[0][0],l=se.h.at(-1)[0];s+=`<path d="${p}L${X(l)},${H-m.b}L${X(f)},${H-m.b}Z" fill="${se.color}" opacity=".09"/>`}
     s+=`<path d="${p}" fill="none" stroke="${se.color}" stroke-width="${se.w||2}"${se.dash?` stroke-dasharray="${se.dash}"`:''} stroke-linejoin="round" stroke-linecap="round"/>`;}
   if(o.endLabels){ // short labels at the right end, nudged apart so they don't overlap
-    const ends=series.map(se=>({y:Y(se.h.at(-1)[1]),t:se.key||se.name,c:se.color})).sort((a,b)=>a.y-b.y);
+    const ends=series.map(se=>({y:Y(se.h.at(-1)[1]),t:se.lbl||se.key||se.name,c:se.color})).sort((a,b)=>a.y-b.y);
     for(let i=1;i<ends.length;i++)if(ends[i].y-ends[i-1].y<12)ends[i].y=ends[i-1].y+12;
     for(let i=ends.length-1;i>=0;i--){if(ends[i].y>H-m.b-2)ends[i].y=H-m.b-2;if(i<ends.length-1&&ends[i+1].y-ends[i].y<12)ends[i].y=ends[i+1].y-12}
     for(const e of ends)s+=`<text x="${W-m.r+6}" y="${e.y+4}" font-size="10.5" font-weight="600" fill="${e.c}">${e.t.length>7?e.t.slice(0,7):e.t}</text>`;}
@@ -788,7 +774,16 @@ function route(){const h=decodeURIComponent(location.hash.slice(1));const [p,t]=
   $('page-grup').hidden=state.page!=='grup';$('page-sirket').hidden=state.page!=='sirket';
   if(state.data){render();if(p)window.scrollTo({top:0})}}
 function render(){const {rows,bm}=computeRows();renderTape(rows,bm);$('tabSirket').href='#sirket/'+state.sel;
-  if(state.page==='grup')renderGroup(rows,bm);else renderCompany(rows,bm);}
+  if(state.page==='grup')renderGroup(rows,bm);else renderCompany(rows,bm);
+  renderNavNote();}
+function renderNavNote(){const el=$('navNote'),D=state.data;const n=D.nav&&D.nav[state.sel];
+  const show=state.page==='sirket'&&n&&n.equity&&!$('navSec').hidden;el.hidden=!show;if(!show)return;
+  const c=co(state.sel),pts=Object.entries(n.equity_log).sort((a,b)=>a[0]<b[0]?-1:1);
+  el.innerHTML=`<p><b>NAD iskontosu metodolojisi:</b> Girişim sermayesi yatırım ortaklıkları portföylerindeki şirketleri bilançoda gerçeğe uygun değerle taşır (borsadaki şirketler borsa fiyatıyla, borsada olmayanlar bağımsız değerleme raporuyla). Bu nedenle bilançodaki <b>Toplam Özkaynaklar</b> kalemi net aktif değer (NAD) olarak kullanılır.</p>
+  <p><b>Formül:</b> İskonto = 1 − Piyasa değeri / Toplam Özkaynaklar. Piyasa değeri = günlük kapanış fiyatı × ${nf(0).format(c.shares/1e6)} milyon hisse (toplam hisse adedi).</p>
+  <p><b>Veri kaynağı:</b> Toplam Özkaynaklar, ${c.name}'in KAP'ta yayımlanan finansal tablolarından alınır (açıklandığı haliyle, TMS 29 enflasyon düzeltmesi sonrası rakam; sonraki dönemlerde yeniden düzenlenmiş karşılaştırmalı rakamlar kullanılmaz). Kullanılan bilanço noktaları: ${pts.map(([d,v])=>`${fmtDateTR(d)} ${nf(2).format(v/1e9)} mlr TL`).join(' · ')}. Yeni finansal tablo açıklandığında TradingView üzerinden otomatik eklenir. Hisse fiyatı ve emsal GSYO verileri: TradingView.</p>
+  <p><b>Günlük hesap:</b> Her gün, o günün piyasa değeri, dönem sonu tarihi o güne eşit veya önce olan son bilançonun özkaynağına bölünür; yani özkaynak bir sonraki bilançoya kadar sabit kalır, piyasa değeri her gün değişir. Bilanço dönem sonu tarihinden itibaren geçerli sayılır (açıklanma tarihinden değil).</p>
+  <p><b>Bilinmesi gerekenler:</b> Bilançodaki portföy değeri dönem sonu itibarıyladır; borsadaki iştiraklerin (ŞOK %23,66, Penta %32,21, Makina Takım %14,60) fiyatı sonrasında değişse de bir sonraki bilançoya kadar yansımaz. Borsada olmayan iştiraklerin (Polinas, FLO, Türkiye Finans, Azmüsebat, Gözde Tech Ventures) değeri değerleme raporuna dayanır. Emsal GSYO tablosunda her şirketin kendi son bilançosu kullanılır.</p>`;}
 addEventListener('hashchange',route);
 let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>state.data&&render(),150)});
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>state.data&&render());
