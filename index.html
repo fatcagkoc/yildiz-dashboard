@@ -15,7 +15,7 @@
   --bg:#f3f4f6;--surface:#ffffff;--surface2:#f8f9fb;--line:#e3e6eb;--grid:#eef0f3;
   --text:#0d1420;--text2:#4a5463;--muted:#7b8494;
   --hdr:#0c1a2e;--hdr2:#13243d;--hdr-line:#22365a;--hdr-text:#ffffff;--hdr-muted:#9fb0c8;
-  --accent:#2a78d6;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#4a3aa7;
+  --accent:#2a78d6;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#4a3aa7;--s5:#c2185b;
   --up:#0b7a35;--down:#c4302b;--up-bg:#e5f4ea;--down-bg:#fbe9e8;
   --chip:#eceff3;--shadow:0 1px 2px rgba(13,20,32,.05),0 2px 8px rgba(13,20,32,.04);
 }
@@ -24,7 +24,7 @@
   --bg:#0b0f16;--surface:#131a24;--surface2:#18202c;--line:#243042;--grid:#1c2532;
   --text:#f2f5f9;--text2:#b5bfcc;--muted:#7f8b9b;
   --hdr:#0a1422;--hdr2:#101d30;--hdr-line:#1f3150;
-  --accent:#3987e5;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#9085e9;
+  --accent:#3987e5;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#9085e9;--s5:#e2588c;
   --up:#3ccf6e;--down:#f07068;--up-bg:#123321;--down-bg:#3a1a19;
   --chip:#1c2532;--shadow:none;
 }}
@@ -33,7 +33,7 @@
   --bg:#0b0f16;--surface:#131a24;--surface2:#18202c;--line:#243042;--grid:#1c2532;
   --text:#f2f5f9;--text2:#b5bfcc;--muted:#7f8b9b;
   --hdr:#0a1422;--hdr2:#101d30;--hdr-line:#1f3150;
-  --accent:#3987e5;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#9085e9;
+  --accent:#3987e5;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#9085e9;--s5:#e2588c;
   --up:#3ccf6e;--down:#f07068;--up-bg:#123321;--down-bg:#3a1a19;
   --chip:#1c2532;--shadow:none;
 }
@@ -346,7 +346,7 @@ tr.me .dbar i{opacity:1}
       <div class="scroll-hint">Diğer sütunlar için yana kaydırın · ilk sütun sabit</div>
     </div>
 
-    <div class="card mt">
+    <div class="card mt" id="mcapCard">
       <h2>Piyasa değeri: şirket ve rakipleri</h2>
       <p class="hint" id="mcapHint"></p>
       <div class="bars mbars num" id="mcapBars"></div>
@@ -386,14 +386,16 @@ tr.me .dbar i{opacity:1}
     </section>
 
     <section id="globalSec" hidden>
-      <div class="sec-head"><h2 class="sec-title">Global Benchmark</h2><p class="hint">Ülker'in global emsalleri. Para birimleri ve piyasalar farklı olduğu için fiyatlar değil, her şirketin <b>kendi pazarına göre durumu</b> karşılaştırılır.</p></div>
+      <div class="sec-head"><h2 class="sec-title">Global Benchmark</h2><p class="hint">Ülker'in global emsalleri. Para birimleri ve piyasalar farklı olduğu için fiyatlar değil, her şirketin <b>kendi pazarına ya da sektörüne göre durumu</b> karşılaştırılır.</p></div>
 
       <div class="card">
-        <h2>Her şirket kendi endeksine göre</h2>
-        <p class="hint">Hücre = şirket getirisi − kendi ana endeksinin getirisi (puan, yerel para birimi). Yeşil = pazarını geçiyor, kırmızı = geride. Bir sütunda hücrelerin çoğu aynı renkteyse hareket tek şirkete özgü değil, sektöre yayılmış olabilir.</p>
+        <div class="head-row">
+          <div><h2 id="heatTitle">Her şirket kendi pazarına göre</h2><p class="hint" id="heatHint"></p></div>
+          <div class="seg" role="group" aria-label="Karşılaştırma" id="heatMode"></div>
+        </div>
         <div class="tbl-wrap">
           <table class="num heat">
-            <thead><tr><th>Şirket</th><th>Kendi endeksi</th><th>1 Ay</th><th>Yılbaşından beri</th><th>1 Yıl</th></tr></thead>
+            <thead><tr><th>Şirket</th><th>Karşılaştırılan endeks</th><th>1 Ay</th><th>Yılbaşından beri</th><th>1 Yıl</th></tr></thead>
             <tbody id="heatBody"></tbody>
           </table>
         </div>
@@ -424,8 +426,8 @@ tr.me .dbar i{opacity:1}
     <p class="notes-h">Kaynaklar ve yöntem</p>
     <div class="notes-body" id="notesBody">
     <p><b>Kaynaklar:</b> Fiyat, endeks geçmişi, endeks bileşenleri, piyasa değeri, F/K ve PD/DD: TradingView. USD/TRY: TradingView ve Yahoo Finance. Veriler yaklaşık 15 dakika gecikmelidir; hafta içi 10:20–18:50 arasında yarım saatte bir güncellenir (18:50 güncellemesi günün kapanışını alır). Açık sayfa yeni veriyi 10 dakikada bir kendiliğinden çeker.</p>
-    <p><b>Sektör endeksleri:</b> ULKER, BESLR → BIST Gıda İçecek (XGIDA) · SOKM, BIZIM → BIST Ticaret (XTCRT) · GOZDE → BIST Mali (XUMAL) · PENTA → BIST Teknoloji (XUTEK) · MAKTK → BIST Metal Eşya Makina (XMESY). Genel karşılaştırma: BIST 100. GOZDE'nin değerleme karşılaştırmasında bankalar hariç tutulur.</p>
-    <p><b>Rakip endeksi (XRAKIP):</b> Her şirket için borsadaki doğrudan rakiplerinden hesaplanan, piyasa değeri ağırlıklı fiyat endeksi. Tek şirketin (ya da aynı gruba ait şirketlerin toplamının) ağırlığı en fazla %40 ile sınırlıdır, ağırlıklar her gün yeniden hesaplanır. Ağırlıklar bir önceki kapanıştaki piyasa değerine göre belirlenir. Bir rakip o gün işlem görmediyse (tatil, işlem durdurma) son fiyatıyla tutulur, hareketi ilk işlem gününde endekse yansır; 30 günden uzun süre işlem görmeyen rakip, yeniden işlem görene kadar endeks dışında kalır. Yalnızca 2 rakibi olan şirkette (Makina Takım) %40 sınırı matematiksel olarak uygulanamaz; iki rakip eşit (%50/%50) ağırlıkla girer. ŞOK ve Bizim Toptan aynı gıda perakende rakip endeksini kullanır. Resmi bir BIST endeksi değildir; rakip listeleri Yıldız Holding strateji ekibince belirlenmiştir.</p>
+    <p><b>Sektör endeksleri:</b> ULKER, BESLR → BIST Gıda İçecek (XGIDA) · SOKM, BIZIM → BIST Ticaret (XTCRT) · GOZDE → BIST Mali (XUMAL) · PENTA → BIST Teknoloji (XUTEK) · MAKTK → BIST Metal Eşya Makina (XMESY) ve BIST Sınai (XUSIN). Genel karşılaştırma: BIST 100. GOZDE'nin değerleme karşılaştırmasında bankalar hariç tutulur.</p>
+    <p><b>Rakip endeksi (XRAKIP):</b> Her şirket için borsadaki doğrudan rakiplerinden hesaplanan, piyasa değeri ağırlıklı fiyat endeksi. Tek şirketin (ya da aynı gruba ait şirketlerin toplamının) ağırlığı en fazla %40 ile sınırlıdır, ağırlıklar her gün yeniden hesaplanır. Ağırlıklar bir önceki kapanıştaki piyasa değerine göre belirlenir. Bir rakip o gün işlem görmediyse (tatil, işlem durdurma) son fiyatıyla tutulur, hareketi ilk işlem gününde endekse yansır; 30 günden uzun süre işlem görmeyen rakip, yeniden işlem görene kadar endeks dışında kalır. ŞOK ve Bizim Toptan aynı gıda perakende rakip endeksini kullanır. Ülker ve Makina Takım için rakip endeksi kullanılmaz: Ülker'in borsadaki rakipleri ölçek olarak çok küçük kalıyor, Makina Takım'ın ise borsada doğrudan rakibi yok; bu iki şirket sektör ve pazar endeksleriyle karşılaştırılır. Resmi bir BIST endeksi değildir; rakip listeleri Yıldız Holding strateji ekibince belirlenmiştir.</p>
     <div id="navNote" hidden></div>
     <p><b>Fiyatlar</b> bedelsiz sermaye artırımı ve bölünmelere göre düzeltilmiştir. <b>Geçmiş piyasa değerleri</b> (grup toplamı grafiği ve endeks ağırlıkları) bugünkü hisse adediyle hesaplanır; geçmişteki bedelli sermaye artırımları ayrıca dikkate alınmaz. <b>USD görünümü:</b> her günün fiyatı o günün USD/TRY kuruyla çevrilir.</p>
     </div>
@@ -435,7 +437,7 @@ tr.me .dbar i{opacity:1}
 </main>
 
 <script>
-const state={page:'grup',cur:'TRY',sel:'ULKER',rangeG:'1Y',rangeP:'1Y',rangeC:'1Y',rangeGC:'1Y',rangeGL:'1Y',rangeNV:'1Y',data:null,hidden:new Set(),visFor:null,ghidden:new Set(),glhidden:null,nvhidden:null};
+const state={page:'grup',cur:'TRY',sel:'ULKER',rangeG:'1Y',rangeP:'1Y',rangeC:'1Y',rangeGC:'1Y',rangeGL:'1Y',rangeNV:'1Y',heatMode:'pazar',data:null,hidden:new Set(),visFor:null,ghidden:new Set(),glhidden:null,nvhidden:null};
 const nf=(d)=>new Intl.NumberFormat('tr-TR',{minimumFractionDigits:d,maximumFractionDigits:d});
 const css=(v)=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const $=(id)=>document.getElementById(id);
@@ -564,7 +566,7 @@ function renderGroup(rows,bm){const D=state.data;
 
 /* ---------- ŞİRKET page ---------- */
 function renderCompany(rows,bm){const D=state.data;const x=rows.find(r=>r.c.ticker===state.sel);const c=x.c;
-  const bmk=D.benchmarks[c.bench],usd=state.cur==='USD';
+  const bmk=D.benchmarks[c.bench],usd=state.cur==='USD',b2=c.bench2&&D.benchmarks[c.bench2]&&D.benchmarks[c.bench2].history?D.benchmarks[c.bench2]:null;
   $('picker').innerHTML=rows.map(r=>`<button data-t="${r.c.ticker}" aria-pressed="${r.c.ticker===state.sel}">${logo(r.c,26)}${r.c.ticker}</button>`).join('');
   $('picker').querySelectorAll('button').forEach(b=>b.onclick=()=>{location.hash='#sirket/'+b.dataset.t});
   // hero
@@ -606,12 +608,14 @@ function renderCompany(rows,bm){const D=state.data;const x=rows.find(r=>r.c.tick
     {key:c.ticker,name:c.ticker,color:css('--s1'),h:sliceRange(x.h,state.rangeC),w:2},
     {key:c.bench,name:`${bmk.name} (${c.bench})`,color:css('--s2'),h:sliceRange(conv(bmk.history),state.rangeC),w:2},
     ...(pidx&&pidx.history.length>1?[{key:'XRAKIP',name:`Rakip endeksi (XRAKIP)`,color:css('--s4'),h:sliceRange(conv(pidx.history),state.rangeC),w:2}]:[]),
+    ...(b2?[{key:c.bench2,name:`${b2.name} (${c.bench2})`,color:css('--s5'),h:sliceRange(conv(b2.history),state.rangeC),w:2}]:[]),
     {key:'XU100',name:'BIST 100',color:css('--s3'),h:sliceRange(conv(D.benchmarks.XU100.history),state.rangeC),w:2}];
   const peerSer=peerList.map((p,i)=>({key:p,name:p,color:pc(i),h:sliceRange(conv(D.peers[p].history),state.rangeC),w:1.5,dash:'4 3',peer:true}));
   const all=[...base,...peerSer].map(norm);
   const vis=all.filter(s=>!state.hidden.has(s.key));
-  $('cmpTitle').textContent=`${c.name} vs sektör ve rakipler`;
-  $('cmpHint').textContent=`Dönem başı = 100 · ${usd?'USD bazında':'TL bazında'} · çizgileri açıp kapatmak için tıklayın`;
+  $('cmpTitle').textContent=`${c.name} vs ${pidx?'sektör ve rakipler':'sektör ve piyasa'}`;
+  const NOPEER={ULKER:'Ülker; sektör endeksi, BIST 100 ve sayfanın altındaki Global Benchmark ile karşılaştırılır.',MAKTK:'Borsada doğrudan emsali olmadığı için Makina Takım sektör endeksleriyle karşılaştırılır.'};
+  $('cmpHint').textContent=`Dönem başı = 100 · ${usd?'USD bazında':'TL bazında'} · çizgileri açıp kapatmak için tıklayın`+(!pidx&&NOPEER[c.ticker]?' · '+NOPEER[c.ticker]:'');
   const mem=bmk.members||[],pm=pidx?pidx.members:[];
   const fxNow=usd?(fxAt(x.h.at(-1)[0].slice(0,10))||1):1;
   const grps=pidx&&pidx.groups?Object.entries(pidx.groups):[];
@@ -621,6 +625,10 @@ function renderCompany(rows,bm){const D=state.data;const x=rows.find(r=>r.c.tick
     <div class="pop" id="pop" role="dialog" aria-label="${bmk.name} bileşenleri"><h3>${bmk.name} (${c.bench})</h3>
       <p>${mem.length} şirket · piyasa değerine göre sıralı · ${c.ticker} vurgulu</p>
       <ol>${mem.map((m,i)=>`<li class="${m[0]===c.ticker?'me':''}" title="${m[1]} · ${money(m[2]/fxNow)}"><span>${i+1}</span><b>${m[0]}</b><em>${m[1]}</em></li>`).join('')}</ol></div></div>`+
+    (b2&&b2.members?`<div class="info" id="infoB2"><button class="info-btn" aria-expanded="false" aria-controls="popB2">${popIcon}${c.bench2} endeksindeki şirketler · ${b2.members.length}</button>
+    <div class="pop" id="popB2" role="dialog" aria-label="${b2.name} bileşenleri"><h3>${b2.name} (${c.bench2})</h3>
+      <p>${b2.members.length} şirket · piyasa değerine göre sıralı · ${c.ticker} vurgulu</p>
+      <ol>${b2.members.map((m,i)=>`<li class="${m[0]===c.ticker?'me':''}" title="${m[1]} · ${money(m[2]/fxNow)}"><span>${i+1}</span><b>${m[0]}</b><em>${m[1]}</em></li>`).join('')}</ol></div></div>`:'')+
     (pidx?`<div class="info" id="info2"><button class="info-btn" aria-expanded="false" aria-controls="pop2">${popIcon}Rakip endeksi (XRAKIP) · ${pm.length} şirket</button>
     <div class="pop" id="pop2" role="dialog" aria-label="Rakip endeksi bileşenleri"><h3>${pidx.name}</h3>
       <p>Piyasa değeri ağırlıklı, tek şirket en fazla %${Math.round(pidx.cap*100)} · her gün yeniden dengelenir · yüzdeler son hesaplamada kullanılan ağırlıklardır (bir önceki kapanış piyasa değerine göre)</p>
@@ -636,13 +644,14 @@ function renderCompany(rows,bm){const D=state.data;const x=rows.find(r=>r.c.tick
   const la=$('lgAll');if(la)la.onclick=()=>{allPeersOn?peerList.forEach(p=>state.hidden.add(p)):peerList.forEach(p=>state.hidden.delete(p));render()};
   lineChart($('cmpChart'),vis,{height:280,fmt:v=>nf(0).format(v),tipFmt:v=>`${nf(1).format(v)} (${pct(v-100)})`,endLabels:true});
   // returns table
-  const K=['1D','1M','YTD','1Y'],br=bm[c.bench],xr=bm.XU100,pr=pidx?returns(conv(pidx.history)):null;
+  const K=['1D','1M','YTD','1Y'],br=bm[c.bench],xr=bm.XU100,pr=pidx?returns(conv(pidx.history)):null,b2r=b2?bm[c.bench2]:null;
   const line=(lab,r,color,dash)=>`<tr><td><span style="display:inline-flex;align-items:center;gap:8px"><i style="width:12px;height:3px;border-radius:2px;background:${color};display:inline-block${dash?';background:repeating-linear-gradient(90deg,'+color+' 0 3px,transparent 3px 5px)':''}"></i>${lab}</span></td>${K.map(k=>`<td class="${cls(r[k])}">${pct(r[k])}</td>`).join('')}</tr>`;
   const diff=(lab,r)=>`<tr><td style="font-weight:600">${lab}</td>${K.map(k=>`<td>${relBadge(x.r[k],r&&r[k]).replace(/<\/?div>/g,'')||'–'}</td>`).join('')}</tr>`;
-  $('cmpBody').innerHTML=line(c.ticker,x.r,css('--s1'))+line(bmk.name,br,css('--s2'))+(pr?line('Rakip endeksi (XRAKIP)',pr,css('--s4')):'')+line('BIST 100',xr,css('--s3'))+
+  $('cmpBody').innerHTML=line(c.ticker,x.r,css('--s1'))+line(bmk.name,br,css('--s2'))+(pr?line('Rakip endeksi (XRAKIP)',pr,css('--s4')):'')+(b2r?line(b2.name,b2r,css('--s5')):'')+line('BIST 100',xr,css('--s3'))+
     peerSer.filter(s=>!state.hidden.has(s.key)).map((s,i)=>{const pl=D.peers[s.key].history.at(-1)[0],old=pl<c.history.at(-1)[0];return line(`${s.key} · ${D.peers[s.key].name}${old?` <span class="asof">(son işlem ${fmtDateTR(pl)})</span>`:''}`,returns(conv(D.peers[s.key].history)),s.color,true)}).join('')+
-    diff('Fark (sektöre göre)',br)+(pr?diff('Fark (rakiplere göre)',pr):'');
-  // peer market cap bars
+    diff('Fark (sektöre göre)',br)+(b2r?diff(`Fark (${b2.name} endeksine göre)`,b2r):'')+(pr?diff('Fark (rakiplere göre)',pr):'');
+  // peer market cap bars (hidden for companies without a peer set)
+  $('mcapCard').hidden=!peerList.length;
   const mrows=[{t:c.ticker,name:c.name,mcap:c.mcap,h:c.history,me:true},...peerList.map(p=>({t:p,name:D.peers[p].name,mcap:D.peers[p].mcap,h:D.peers[p].history}))]
     .filter(r=>r.mcap).map(r=>({...r,mcap:r.mcap/fxNow,ytd:returns(conv(r.h))['YTD']})).sort((a,b)=>b.mcap-a.mcap);
   const mmax=Math.max(...mrows.map(r=>r.mcap));
@@ -703,7 +712,9 @@ function toUSD(hist){return hist.map(([d,v])=>{const f=fxAt(d.slice(0,10));retur
 function renderGlobal(c,x,bm,G){const D=state.data;
   // common end date: BIST closes before the US, so compare everything as of the latest day all series have
   const lastOf=h=>h&&h.length?h.at(-1)[0].slice(0,10):'9999';
-  const ce=[lastOf(c.history),lastOf(G.index.history),lastOf(G.indices.XLP.history),lastOf(G.indices['^GSPC'].history),...G.peers.map(p=>lastOf(p.history_usd))].sort()[0];
+  const SEC=['FTXG','SX3P'].filter(k=>G.indices[k]&&G.indices[k].history&&G.indices[k].history.length>1);
+  const usdOf=ix=>ix.history_usd||ix.history;
+  const ce=[lastOf(c.history),lastOf(G.index.history),lastOf(G.indices['^GSPC'].history),...SEC.map(k=>lastOf(usdOf(G.indices[k]))),...G.peers.map(p=>lastOf(p.history_usd))].sort()[0];
   const cu=h=>cutTo(h,ce);
   const behind=ce<lastOf(c.history);
   $('glHint').innerHTML=`Dönem başı = 100 · tüm çizgiler USD · karşılaştırma tarihi ${fmtDateTR(ce)}${behind?' <span class="asof">(ABD/Avrupa kapanışı Türkiye\'den sonra geldiği için tüm seriler ortak son güne göre)</span>':''}`;
@@ -711,20 +722,30 @@ function renderGlobal(c,x,bm,G){const D=state.data;
   const K=['1M','YTD','1Y'];
   const heatCls=v=>{if(v==null)return '';const a=Math.abs(v);const lvl=a<3?1:a<10?2:3;return (v>=0?'u':'d')+lvl};
   const hcell=(r,b)=>K.map(k=>{const v=r[k]!=null&&b[k]!=null?r[k]-b[k]:null;return `<td class="h ${heatCls(v)}"><span>${v==null?'–':(v>=0?'▲ ':'▼ ')+pp(v)}</span></td>`}).join('');
-  const ulTL=returns(cu(c.history)),xuTL=returns(cu(D.benchmarks.XU100.history)),xgTL=returns(cu(D.benchmarks[c.bench].history));
-  const prow=G.peers.map(p=>{const r=returns(cu(p.history)),b=returns(cu(G.indices[p.bench].history));return {p,r,b}});
+  const sector=state.heatMode==='sektor';
+  const ulTL=returns(cu(c.history)),ulB=returns(cu(D.benchmarks[sector?c.bench:'XU100'].history));
+  const prow=G.peers.map(p=>{
+    if(!sector){const ix=G.indices[p.bench];return {p,r:returns(cu(p.history)),b:returns(cu(ix.history)),lab:ix.name,note:p.bench_note,usd:false}}
+    const ix=G.indices[p.sector];if(!ix)return {p,r:{},b:{},lab:'–'};
+    const same=ix.ccy===p.ccy;   // compare in the same currency; CHF stocks vs the EUR index -> both in USD
+    return {p,r:returns(cu(same?p.history:p.history_usd)),b:returns(cu(same?ix.history:usdOf(ix))),lab:ix.short||ix.name,full:ix.name,usd:!same}});
+  const ixCell=x=>`<td style="color:var(--text2)" title="${x.full||x.note||x.lab}">${x.lab}${x.note?'<div class="asof">S&amp;P 500 üyesi değil</div>':''}${x.usd?'<div class="asof">USD bazında</div>':''}</td>`;
+  $('heatTitle').textContent=sector?'Her şirket kendi sektörüne göre':'Her şirket kendi pazarına göre';
+  $('heatHint').innerHTML=(sector?
+    'Hücre = şirket getirisi − gıda ve içecek sektör endeksinin getirisi (puan). Türkiye: BIST Gıda İçecek · ABD: ABD gıda ve içecek fonu · Avrupa: STOXX Europe 600 Gıda ve İçecek. Nestlé ve Lindt (CHF) ile Avrupa endeksi (EUR) farklı para biriminde olduğu için ikisi de USD\'ye çevrilerek karşılaştırılır. Yeşil = sektörünü geçiyor, kırmızı = geride.':
+    'Hücre = şirket getirisi − kendi borsasının ana endeksinin getirisi (puan, yerel para birimi). Yeşil = pazarını geçiyor, kırmızı = geride. Campbell\'s 22.06.2026\'da S&amp;P 500\'den çıktı; ABD pazarı ölçüsü olarak S&amp;P 500 ile karşılaştırılmaya devam ediyor.')+
+    ' Bir sütunda hücrelerin çoğu aynı renkteyse hareket tek şirkete özgü değil, geneline yayılmış olabilir.';
   $('heatBody').innerHTML=
-    `<tr class="me"><td><div class="cocell">${logo(c,24)}<div><div class="co">Ülker</div><div class="tk">ULKER · Türkiye</div></div></div></td><td style="color:var(--text2)">BIST 100</td>${hcell(ulTL,xuTL)}</tr>`+
-    `<tr class="me"><td><div class="cocell"><span style="width:24px"></span><div><div class="co">Ülker</div><div class="tk">sektör endeksine göre</div></div></div></td><td style="color:var(--text2)">BIST Gıda İçecek</td>${hcell(ulTL,xgTL)}</tr>`+
-    prow.map(({p,r,b},i)=>`<tr class="${i===0?'sep':''}"><td><div class="cocell">${logo({ticker:p.t,logoid:p.logoid},24)}<div><div class="co">${p.name}</div><div class="tk">${p.t} · ${p.country}</div></div></div></td><td style="color:var(--text2)">${G.indices[p.bench].name}</td>${hcell(r,b)}</tr>`).join('');
+    `<tr class="me"><td><div class="cocell">${logo(c,24)}<div><div class="co">Ülker</div><div class="tk">ULKER · Türkiye</div></div></div></td><td style="color:var(--text2)">${sector?'BIST Gıda İçecek':'BIST 100'}</td>${hcell(ulTL,ulB)}</tr>`+
+    prow.map((x,i)=>`<tr class="${i===0?'sep':''}"><td><div class="cocell">${logo({ticker:x.p.t,logoid:x.p.logoid},24)}<div><div class="co">${x.p.name}</div><div class="tk">${x.p.t} · ${x.p.country}</div></div></div></td>${ixCell(x)}${hcell(x.r,x.b)}</tr>`).join('');
   const summ=K.map(k=>{const n=prow.filter(({r,b})=>r[k]!=null&&b[k]!=null&&r[k]<b[k]).length;return [k,n]});
   const lab={'1M':'son 1 ayda','YTD':'yılbaşından beri','1Y':'son 1 yılda'};
-  $('heatSummary').innerHTML='<b>Özet:</b> '+summ.map(([k,n])=>`${lab[k]} <b>${n} / ${G.peers.length}</b> global şirket kendi endeksinin gerisinde`).join(' · ')+`. <span class="asof">Tüm satırlar ${fmtDateTR(ce)} kapanışına göre.</span>`;
+  $('heatSummary').innerHTML='<b>Özet:</b> '+summ.map(([k,n])=>`${lab[k]} <b>${n} / ${G.peers.length}</b> global şirket ${sector?'kendi sektör endeksinin':'kendi pazar endeksinin'} gerisinde`).join(' · ')+`. <span class="asof">Tüm satırlar ${fmtDateTR(ce)} kapanışına göre.</span>`;
   // USD chart
   const GC=['#eda100','#e87ba4','#008300','#e34948','#0a8f9c','#a0522d','#7b5cd6','#5a6b7a'];
   const ser=[{key:'ULKER',name:'ULKER (USD)',color:css('--s1'),h:sliceRange(cu(toUSD(c.history)),state.rangeGL),w:2.2},
     {key:'XGLOBAL',name:'Global rakip endeksi (XGLOBAL)',color:css('--s4'),h:sliceRange(cu(G.index.history),state.rangeGL),w:2.2},
-    {key:'XLP',lbl:'XLP',name:G.indices.XLP.name||"ABD temel tüketim ETF'i (XLP)",color:css('--s2'),h:sliceRange(cu(G.indices.XLP.history),state.rangeGL),w:2},
+    ...SEC.map(k=>({key:k,lbl:k,name:G.indices[k].name+(G.indices[k].ccy!=='USD'?' · USD':''),color:css(k==='FTXG'?'--s2':'--s5'),h:sliceRange(cu(usdOf(G.indices[k])),state.rangeGL),w:2})),
     {key:'^GSPC',lbl:'S&P 500',name:'S&P 500',color:css('--s3'),h:sliceRange(cu(G.indices['^GSPC'].history),state.rangeGL),w:2},
     ...G.peers.map((p,i)=>({key:p.t,name:p.t,color:GC[i%8],h:sliceRange(cu(p.history_usd),state.rangeGL),w:1.5,dash:'4 3',peer:true}))]
     .map(s=>{const b=s.h[0]?s.h[0][1]:1;return {...s,h:s.h.map(([d,v])=>[d,v/b*100])}});
@@ -735,16 +756,21 @@ function renderGlobal(c,x,bm,G){const D=state.data;
   $('glLegend').querySelectorAll('.lg').forEach(b=>b.onclick=()=>{const k=b.dataset.k;if(k==='ULKER')return;state.glhidden.has(k)?state.glhidden.delete(k):state.glhidden.add(k);render()});
   $('glAll').onclick=()=>{allOn?G.peers.forEach(p=>state.glhidden.add(p.t)):G.peers.forEach(p=>state.glhidden.delete(p.t));render()};
   const popIcon=`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6.5"/><path d="M8 7.2v4M8 4.8v.1" stroke-linecap="round"/></svg>`;
-  const gm=G.index.members;
+  const gm=G.index.members,ours=new Set(G.peers.map(p=>p.t));
+  const secPop=k=>{const ix=G.indices[k];const hs=ix.holdings||[];
+    return `<div class="info" id="info_${k}"><button class="info-btn" aria-expanded="false" aria-controls="pop_${k}">${popIcon}${ix.short||k} içeriği · ${ix.n||hs.length} şirket</button>
+    <div class="pop" id="pop_${k}" role="dialog" aria-label="${ix.name} içeriği"><h3>${ix.name}</h3><p>${ix.desc||''}</p>
+      <p>En büyük ${hs.length} şirket ve ağırlıkları · ${fmtDateTR(ix.as_of)} itibarıyla (${ix.source}) · liste elle güncellenir. Vurgulananlar Ülker'in global emsal setinde.</p>
+      <ol class="one">${hs.map((m,i)=>`<li class="${ours.has(m[0])?'me':''}" title="${m[1]}"><span>${i+1}</span><b>${m[0]}</b><em>${m[1]}</em><u class="num">%${nf(1).format(m[2])}</u></li>`).join('')}</ol></div></div>`};
   $('glInfo').innerHTML=`<div class="info" id="info3"><button class="info-btn" aria-expanded="false" aria-controls="pop3">${popIcon}XGLOBAL bileşenleri ve ağırlıkları · ${gm.length} şirket</button>
     <div class="pop" id="pop3" role="dialog" aria-label="XGLOBAL bileşenleri"><h3>Global rakip endeksi (XGLOBAL)</h3>
       <p>USD bazında, piyasa değeri ağırlıklı, tek şirket en fazla %${Math.round(G.index.cap*100)} · her gün yeniden dengelenir · yüzdeler son hesaplamada kullanılan ağırlıklardır (bir önceki kapanış piyasa değerine göre)</p>
-      <ol class="one">${gm.map((m,i)=>`<li title="${m[1]}"><span>${i+1}</span><b>${m[0]}</b><em>${m[1]}</em><u class="num">$${nf(0).format(m[2]/1e9)} mlr · %${nf(1).format(m[3]*100)}</u></li>`).join('')}</ol></div></div>`;
-  const i3=$('info3'),b3=i3.querySelector('button');b3.onclick=e=>{e.stopPropagation();const o=i3.classList.toggle('open');b3.setAttribute('aria-expanded',o)};
-  document.addEventListener('click',e=>{if(!i3.contains(e.target))i3.classList.remove('open')},{once:true});
+      <ol class="one">${gm.map((m,i)=>`<li title="${m[1]}"><span>${i+1}</span><b>${m[0]}</b><em>${m[1]}</em><u class="num">$${nf(0).format(m[2]/1e9)} mlr · %${nf(1).format(m[3]*100)}</u></li>`).join('')}</ol></div></div>`+SEC.map(secPop).join('');
+  $('glInfo').querySelectorAll('.info').forEach(info=>{const btn=info.querySelector('button');
+    btn.onclick=e=>{e.stopPropagation();$('glInfo').querySelectorAll('.info').forEach(o=>o!==info&&o.classList.remove('open'));const o=info.classList.toggle('open');btn.setAttribute('aria-expanded',o)}});
   lineChart($('glChart'),vis.length?vis:ser.slice(0,1),{height:300,fmt:v=>nf(0).format(v),tipFmt:v=>`${nf(1).format(v)} (${pct(v-100)})`,endLabels:true});
   const KK=['1D','1M','YTD','1Y'];
-  const rowOf=s=>s.key==='ULKER'?returns(cu(toUSD(c.history))):s.key==='XGLOBAL'?returns(cu(G.index.history)):s.peer?returns(cu(G.peers.find(p=>p.t===s.key).history_usd)):returns(cu(G.indices[s.key].history));
+  const rowOf=s=>s.key==='ULKER'?returns(cu(toUSD(c.history))):s.key==='XGLOBAL'?returns(cu(G.index.history)):s.peer?returns(cu(G.peers.find(p=>p.t===s.key).history_usd)):returns(cu(usdOf(G.indices[s.key])));
   $('glBody').innerHTML=vis.map(s=>`<tr><td><span style="display:inline-flex;align-items:center;gap:8px"><i style="width:12px;height:3px;border-radius:2px;background:${s.color};display:inline-block${s.dash?';background:repeating-linear-gradient(90deg,'+s.color+' 0 3px,transparent 3px 5px)':''}"></i>${s.peer?s.key+' · '+G.peers.find(p=>p.t===s.key).name:s.name}</span></td>${KK.map(k=>`<td class="${cls(rowOf(s)[k])}">${pct(rowOf(s)[k])}</td>`).join('')}</tr>`).join('')+
     (state.glhidden.has('XGLOBAL')?'':`<tr><td style="font-weight:600">Fark (ULKER − XGLOBAL)</td>${KK.map(k=>{const a=returns(cu(toUSD(c.history)))[k],b=returns(cu(G.index.history))[k];return `<td>${relBadge(a,b).replace(/<\/?div>/g,'')||'–'}</td>`}).join('')}</tr>`);
 }
@@ -801,7 +827,7 @@ function seg(id,key,opts){const el=$(id);
   el.onclick=e=>{const b=e.target.closest('button');if(!b)return;state[key]=b.dataset.k;el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));render()};}
 document.querySelector('[aria-label="Para birimi"]').onclick=e=>{const b=e.target.closest('button');if(!b)return;state.cur=b.dataset.cur;
   document.querySelectorAll('[data-cur]').forEach(x=>x.setAttribute('aria-pressed',x===b));render()};
-document.addEventListener('click',e=>{const i=$('info');if(i&&!i.contains(e.target)){i.classList.remove('open')}});
+document.addEventListener('click',e=>{document.querySelectorAll('.info.open').forEach(i=>{if(!i.contains(e.target))i.classList.remove('open')})});
 /* ---------- metric explainers ---------- */
 const TERMS={
   pe:{t:'F/K · Fiyat / Kazanç',p:['Hisse fiyatının, hisse başına son 12 aylık net kâra bölümü. <b>"Kârının kaç katına fiyatlanıyor"</b> demek.','Yüksek F/K, piyasanın kârda büyüme beklediğine ya da hissenin kârına göre yüksek fiyatlandığına işaret edebilir; düşük F/K bunun tersine. Tek başına ucuz/pahalı hükmü vermez.','Zarar eden şirkette hesaplanamaz, "–" görünür. Enflasyon muhasebesi (TMS 29) ve tek seferlik kalemler kârı dalgalandırabilir; sektörle birlikte okunur.']},
@@ -824,7 +850,7 @@ document.addEventListener('pointerover',e=>{const t=e.target.closest('.hint-term
 document.addEventListener('pointerout',e=>{const t=e.target.closest('.hint-term');if(t&&!t.contains(e.relatedTarget))hideTerm()});
 document.addEventListener('click',e=>{const t=e.target.closest('.hint-term');if(t){e.stopPropagation();termEl?hideTerm():showTerm(t)}else if(termEl&&!termEl.contains(e.target))hideTerm()},true);
 addEventListener('scroll',hideTerm,{passive:true});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){const i=$('info');i&&i.classList.remove('open')}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.info.open').forEach(i=>i.classList.remove('open'))});
 function route(){const h=decodeURIComponent(location.hash.slice(1));const [p,t]=h.split('/');
   state.page=p==='sirket'?'sirket':'grup';
   if(t&&state.data&&co(t.toUpperCase()))state.sel=t.toUpperCase();
@@ -876,6 +902,7 @@ fetch('data.json?t='+Date.now()).then(r=>r.json()).then(D=>{
   seg('rangeGC','rangeGC',[['1M','1A'],['YTD','YB'],['1Y','1Y']]);
   seg('rangeGL','rangeGL',[['1M','1A'],['YTD','YB'],['1Y','1Y']]);
   seg('rangeNV','rangeNV',[['1M','1A'],['YTD','YB'],['1Y','1Y']]);
+  seg('heatMode','heatMode',[['pazar','Pazara göre'],['sektor','Sektöre göre']]);
   renderMeta();
   route();
 }).catch(e=>{document.querySelector('.wrap').innerHTML='<div class="err">Veri yüklenemedi. Lütfen sayfayı yenileyin.</div>';console.error(e)});
