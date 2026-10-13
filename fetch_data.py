@@ -93,7 +93,7 @@ COMPANIES = [
     {"ticker": "BIZIM", "name": "Bizim Toptan", "bench": "XTCRT"},
     {"ticker": "GOZDE", "name": "Gözde Girişim", "bench": "XUMAL"},
     {"ticker": "PENTA", "name": "Penta Teknoloji", "bench": "XUTEK"},
-    {"ticker": "MAKTK", "name": "Makina Takım", "bench": "XMESY"},
+    {"ticker": "MAKTK", "name": "Makina Takım", "bench": "XMESY", "bench2": "XUSIN"},
 ]
 BENCHMARKS = {
     "XU100": "BIST 100",
@@ -102,6 +102,7 @@ BENCHMARKS = {
     "XUMAL": "BIST Mali",
     "XUTEK": "BIST Teknoloji",
     "XMESY": "BIST Metal Eşya Makina",
+    "XUSIN": "BIST Sınai",
 }
 # Valuation peers = constituents of the company's sector index.
 # GOZDE's index (BIST Mali) is dominated by banks, so banks are excluded for it.
@@ -109,14 +110,14 @@ EXCLUDE_BANKS_FOR = {"GOZDE"}
 INTRADAY_BARS = 70  # hourly bars, ~1.5 trading weeks
 
 # Listed direct competitors per company (confirmed by Fatih, 2026-10-08).
+# 2026-10-13: ULKER peers removed (too small vs Ülker; director decision) and MAKTK peers removed
+# (MEKAG/IMASM are not cutting-tool makers; no listed direct peer) -> these two use index comparisons only.
 PEERS = {
-    "ULKER": ["KRVGD", "ELITE", "DURKN", "OYLUM"],
     "BESLR": ["TUKAS", "TATGD", "PETUN", "DARDL", "FRIGO", "PENGD"],
     "SOKM": ["BIMAS", "MGROS", "CRFSA", "GMTAS", "MOPAS", "KIMMR"],
     "BIZIM": ["BIMAS", "MGROS", "CRFSA", "GMTAS", "MOPAS", "KIMMR"],  # same food-retail basket as SOKM
     "GOZDE": ["ISGSY", "BULGS", "HDFGS", "VERTU"],
     "PENTA": ["INDES", "INGRM", "DGATE", "ARENA", "DESPC"],
-    "MAKTK": ["MEKAG", "IMASM"],
 }
 PEER_CAP = 0.40  # max weight of one company in a peer index (BIST-style cap)
 # Companies under common control are capped together as one company.
@@ -126,17 +127,44 @@ PEER_GROUPS = {
 PEER_INDEX_NAME = {"SOKM": "Gıda perakende rakip endeksi", "BIZIM": "Gıda perakende rakip endeksi"}
 
 # Global peers for ULKER (home-market benchmark per company; prices via Yahoo, fundamentals via TradingView).
+# bench = home stock-market index ("Pazara göre"); sector = food & beverage benchmark ("Sektöre göre").
 GLOBAL_PEERS = [
-    {"t": "MDLZ", "name": "Mondelez", "yahoo": "MDLZ", "tv": ("america", "NASDAQ:MDLZ"), "ccy": "USD", "bench": "^GSPC", "country": "ABD"},
-    {"t": "HSY", "name": "Hershey", "yahoo": "HSY", "tv": ("america", "NYSE:HSY"), "ccy": "USD", "bench": "^GSPC", "country": "ABD"},
-    {"t": "GIS", "name": "General Mills", "yahoo": "GIS", "tv": ("america", "NYSE:GIS"), "ccy": "USD", "bench": "^GSPC", "country": "ABD"},
-    {"t": "CPB", "name": "Campbell's", "yahoo": "CPB", "tv": ("america", "NASDAQ:CPB"), "ccy": "USD", "bench": "^GSPC", "country": "ABD"},
-    {"t": "PEP", "name": "PepsiCo", "yahoo": "PEP", "tv": ("america", "NASDAQ:PEP"), "ccy": "USD", "bench": "^GSPC", "country": "ABD"},
-    {"t": "NESN", "name": "Nestlé", "yahoo": "NESN.SW", "tv": ("switzerland", "SIX:NESN"), "ccy": "CHF", "bench": "^SSMI", "country": "İsviçre"},
-    {"t": "LISN", "name": "Lindt & Sprüngli", "yahoo": "LISN.SW", "tv": ("switzerland", "SIX:LISN"), "ccy": "CHF", "bench": "^SSMI", "country": "İsviçre"},
-    {"t": "LOTB", "name": "Lotus Bakeries", "yahoo": "LOTB.BR", "tv": ("belgium", "EURONEXT:LOTB"), "ccy": "EUR", "bench": "^BFX", "country": "Belçika"},
+    {"t": "MDLZ", "name": "Mondelez", "yahoo": "MDLZ", "tv": ("america", "NASDAQ:MDLZ"), "ccy": "USD", "bench": "^GSPC", "sector": "FTXG", "country": "ABD"},
+    {"t": "HSY", "name": "Hershey", "yahoo": "HSY", "tv": ("america", "NYSE:HSY"), "ccy": "USD", "bench": "^GSPC", "sector": "FTXG", "country": "ABD"},
+    {"t": "GIS", "name": "General Mills", "yahoo": "GIS", "tv": ("america", "NYSE:GIS"), "ccy": "USD", "bench": "^GSPC", "sector": "FTXG", "country": "ABD"},
+    # Campbell's left the S&P 500 on 2026-06-22 (moved to S&P SmallCap 600); S&P 500 is kept only as the US market yardstick.
+    {"t": "CPB", "name": "Campbell's", "yahoo": "CPB", "tv": ("america", "NASDAQ:CPB"), "ccy": "USD", "bench": "^GSPC", "sector": "FTXG", "country": "ABD",
+     "bench_note": "22.06.2026'dan beri S&P 500 üyesi değil (S&P SmallCap 600); ABD pazarı ölçüsü olarak kullanılıyor"},
+    {"t": "PEP", "name": "PepsiCo", "yahoo": "PEP", "tv": ("america", "NASDAQ:PEP"), "ccy": "USD", "bench": "^GSPC", "sector": "FTXG", "country": "ABD"},
+    {"t": "NESN", "name": "Nestlé", "yahoo": "NESN.SW", "tv": ("switzerland", "SIX:NESN"), "ccy": "CHF", "bench": "^SSMI", "sector": "SX3P", "country": "İsviçre"},
+    {"t": "LISN", "name": "Lindt & Sprüngli", "yahoo": "LISN.SW", "tv": ("switzerland", "SIX:LISN"), "ccy": "CHF", "bench": "^SSMI", "sector": "SX3P", "country": "İsviçre"},
+    {"t": "LOTB", "name": "Lotus Bakeries", "yahoo": "LOTB.BR", "tv": ("belgium", "EURONEXT:LOTB"), "ccy": "EUR", "bench": "^BFX", "sector": "SX3P", "country": "Belçika"},
 ]
-GLOBAL_INDICES = {"^GSPC": "S&P 500", "^SSMI": "SMI (İsviçre)", "^BFX": "BEL 20 (Belçika)", "XLP": "ABD temel tüketim ETF'i (XLP)"}
+GLOBAL_INDICES = {"^GSPC": "S&P 500", "^SSMI": "SMI (İsviçre)", "^BFX": "BEL 20 (Belçika)"}
+# Food & beverage sector benchmarks. S&P's own sector indices are not free (TradingView: permission denied,
+# Yahoo: no history), so the US side uses an ETF that tracks a US food & beverage index.
+# Holdings lists are not in the free sources -> typed here with their date; refresh a few times a year.
+GLOBAL_SECTOR = {
+    "FTXG": {"name": "ABD gıda ve içecek fonu (FTXG)", "short": "ABD gıda",
+             "src": "yahoo", "sym": "FTXG", "ccy": "USD",
+             "desc": "First Trust Nasdaq Food & Beverage ETF. ABD borsalarındaki gıda ve içecek üreticilerinden oluşan Nasdaq US Smart Food & Beverage endeksini izleyen fon; 31 şirket. Market zinciri, restoran ve tütün şirketi yok.",
+             "as_of": "2026-10-11", "source": "stockanalysis.com", "n": 31,
+             "holdings": [["KO", "Coca-Cola", 8.78], ["MDLZ", "Mondelez", 8.60], ["PEP", "PepsiCo", 7.93], ["KHC", "Kraft Heinz", 7.67],
+                          ["ADM", "Archer-Daniels-Midland", 6.52], ["KDP", "Keurig Dr Pepper", 4.41], ["TSN", "Tyson Foods", 4.28],
+                          ["MNST", "Monster Beverage", 4.20], ["STZ", "Constellation Brands", 4.15], ["HSY", "Hershey", 4.08],
+                          ["SJM", "J. M. Smucker", 3.70], ["GIS", "General Mills", 3.46], ["DAR", "Darling Ingredients", 3.38],
+                          ["USFD", "US Foods", 3.31], ["MKC", "McCormick", 2.71], ["BF.B", "Brown-Forman", 2.66],
+                          ["COKE", "Coca-Cola Consolidated", 2.61], ["BG", "Bunge", 2.44], ["HRL", "Hormel Foods", 2.38],
+                          ["CPB", "Campbell's", 2.36], ["LW", "Lamb Weston", 2.19], ["INGR", "Ingredion", 1.95],
+                          ["PRMB", "Primo Brands", 1.83], ["CALM", "Cal-Maine Foods", 1.07], ["MZTI", "Marzetti", 0.67]]},
+    "SX3P": {"name": "STOXX Europe 600 Gıda ve İçecek (SX3P)", "short": "Avrupa gıda",
+             "src": "tv", "sym": "STOXX:SX3P", "ccy": "EUR",
+             "desc": "STOXX Europe 600 endeksindeki gıda ve içecek şirketlerinden oluşan sektör endeksi (EUR). Ağırlıklar, endeksi izleyen iShares fonunun (EXH3) içeriğinden.",
+             "as_of": "2026-08-31", "source": "justETF (iShares EXH3)", "n": 26,
+             "holdings": [["NESN", "Nestlé", 28.56], ["ABI", "Anheuser-Busch InBev", 14.07], ["DGE", "Diageo", 9.98], ["BN", "Danone", 9.25],
+                          ["HEIA", "Heineken", 4.53], ["DSFIR", "DSM-Firmenich", 3.68], ["KRZ", "Kerry Group", 3.01],
+                          ["RI", "Pernod Ricard", 2.85], ["CCH", "Coca-Cola HBC", 2.51], ["CARL B", "Carlsberg", 2.45]]},
+}
 GLOBAL_FX = {"CHF": "CHFUSD=X", "EUR": "EURUSD=X"}
 GLOBAL_CAP = 0.25
 
@@ -496,12 +524,12 @@ def main():
         pdata = {p: peers[p] for p in plist if p in peers and peers[p].get("history")}
         grp = PEER_GROUPS.get(t, {})
         hist, w = peer_index(pdata, calendar, PEER_CAP, groups=grp)
-        item["peer_index"] = {
+        item["peer_index"] = None if not plist else ({
             "code": "XRAKIP", "name": PEER_INDEX_NAME.get(t, f"{c['name']} rakip endeksi"), "cap": PEER_CAP,
             "groups": {g: [p for p in plist if grp.get(p) == g] for g in sorted(set(grp.values()))},
             "history": hist,
             "members": [[p, peers[p]["name"], peers[p].get("mcap"), round(w.get(p, 0), 4), grp.get(p)] for p in plist if p in peers],
-        } if hist else old.get("peer_index")
+        } if hist else old.get("peer_index"))
         item["peers"] = plist
         companies.append(item)
         log("company", t, len(item["history"]), item.get("mcap"), item.get("pe"), item.get("sector_pe"))
@@ -517,6 +545,20 @@ def main():
         for code, name in GLOBAL_INDICES.items():
             bars, meta = retry(yahoo_chart, code)
             gidx[code] = {"name": name, "ccy": meta.get("currency"), "history": series(bars)[-BARS:]}
+        prev_gidx = glob.get("indices", {})
+        for code, cfg in GLOBAL_SECTOR.items():
+            try:
+                if cfg["src"] == "yahoo":
+                    bars, _ = retry(yahoo_chart, cfg["sym"])
+                else:
+                    bars = retry(fetch_history, cfg["sym"], BARS)
+                gidx[code] = {"name": cfg["name"], "ccy": cfg["ccy"], "sector": True, "history": series(bars)[-BARS:],
+                              **{k: cfg[k] for k in ("short", "desc", "as_of", "source", "n", "holdings")}}
+                log("global sector", code, len(bars), bars[-1][1])
+            except Exception as e:  # noqa: BLE001
+                warnings.append(f"global sector {code}: {e}")
+                if code in prev_gidx:
+                    gidx[code] = prev_gidx[code]
         gpeers = {}
         for mk in {p["tv"][0] for p in GLOBAL_PEERS}:
             cols = ["name", "description", "market_cap_basic", "price_earnings_ttm", "price_book_fq",
@@ -546,6 +588,8 @@ def main():
                 if k:
                     out.append([d, round(v * fxh[k], 4)])
             return out
+        for code, ix in gidx.items():   # USD copies for the USD chart / cross-currency comparisons
+            ix["history_usd"] = to_usd(ix["history"], ix.get("ccy") or "USD") if (ix.get("ccy") or "USD") in gfx and ix.get("ccy") != "USD" else ix["history"]
         peers_out = []
         for p in GLOBAL_PEERS:
             bars, meta = retry(yahoo_chart, p["yahoo"])
@@ -553,7 +597,7 @@ def main():
             f = gpeers.get(p["t"], {})
             fxl = 1.0 if p["ccy"] == "USD" else gfx[p["ccy"]]["last"]
             mcap_local = f.get("mcap_local")
-            peers_out.append({**{k: p[k] for k in ("t", "name", "ccy", "bench", "country")},
+            peers_out.append({**{k: p[k] for k in ("t", "name", "ccy", "bench", "sector", "country")}, "bench_note": p.get("bench_note"),
                               "history": hist, "history_usd": to_usd(hist, p["ccy"]),
                               "shares": (mcap_local / hist[-1][1]) if mcap_local and hist else None,
                               "mcap_usd": (mcap_local * fxl) if mcap_local else None,
