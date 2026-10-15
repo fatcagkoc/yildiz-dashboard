@@ -4,7 +4,12 @@ on:
   schedule:
     # Saatler UTC: 07:20-15:20 UTC = 10:20-18:20 Istanbul, hafta ici
     - cron: "20 7-15 * * 1-5"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      test_report:
+        description: "Gun sonu raporunu simdi TEST olarak e-postayla gonder"
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths-ignore: ["data.json"]
@@ -38,15 +43,30 @@ jobs:
         continue-on-error: true
         run: python fetch_data.py
 
+      - name: Gun sonu raporu
+        continue-on-error: true
+        env:
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASS: ${{ secrets.MAIL_PASS }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          REPORT_TEST: ${{ inputs.test_report }}
+        run: python report.py
+
       - name: data.json kaydet
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data.json
+          [ -f rapor.html ] && git add rapor.html
+          [ -f report_state.json ] && git add report_state.json
           if ! git diff --staged --quiet; then
             git commit -m "Veri guncellemesi $(date -u +'%Y-%m-%d %H:%M') UTC"
-            git pull --rebase --autostash || true
-            git push
+            # if another run pushed in the meantime, keep this run's (newer) files and retry
+            for i in 1 2 3; do
+              if git pull --rebase -X theirs && git push; then break; fi
+              git rebase --abort 2>/dev/null || true
+              sleep 5
+            done
           fi
 
       - uses: actions/configure-pages@v5
