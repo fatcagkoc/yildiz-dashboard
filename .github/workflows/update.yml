@@ -1,9 +1,6 @@
 name: Verileri guncelle ve yayinla
 
 on:
-  schedule:
-    # Saatler UTC: 07:20-15:20 UTC = 10:20-18:20 Istanbul, hafta ici
-    - cron: "20 7-15 * * 1-5"
   workflow_dispatch:
     inputs:
       test_report:
