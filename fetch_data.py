@@ -209,8 +209,8 @@ NAV_SEED = {"GOZDE": {
 NAV_EXCLUDE = {"GOZDE": {"2025-09-30"}}  # earlier analyst-note seed, removed (not a statement figure)
 # First trading day each statement was public (KAP). The discount chart uses a statement only from this date.
 NAV_EFFECTIVE_SEED = {"GOZDE": {
-    "2025-12-31": "2026-03-03",  # exact KAP time not found; SPK 60-day deadline (02.03.2026) -> next trading day, conservative
-    "2026-03-31": "2026-04-30",  # KAP 29.04.2026 20:48
+    "2025-12-31": "2026-03-02",  # KAP 27.02.2026 (Fri) 20:03, after the close -> next trading day (Mon)
+    "2026-03-31": "2026-04-30",  # KAP 29.04.2026 20:47
     "2026-06-30": "2026-08-05",  # KAP 04.08.2026 21:29
 }}
 
