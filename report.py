@@ -210,8 +210,21 @@ def build(D):
         glob = {"ftxg": returns(ix["FTXG"]["history"]), "ftxg_d": ix["FTXG"]["history"][-1][0],
                 "sx3p": returns(ix["SX3P"]["history"]), "sx3p_d": ix["SX3P"]["history"][-1][0]}
 
+    # macro indicators at the bottom (USD/TRY, cocoa, palm oil, Brent): latest value and change vs previous close
+    macro = []
+    M = D.get("macro") or {}
+    items = {m["k"]: m for m in M.get("items", [])}
+    for k in M.get("report") or ["USDTRY", "COCOA", "PALM", "BRENT"]:
+        m = items.get(k)
+        h = cut(m["history"], day) if m and m.get("history") else []
+        if len(h) >= 2:
+            macro.append({"k": k, "name": m["name"], "unit": m["unit"], "dec": m.get("dec", 2),
+                          "last": h[-1][1], "d1": (h[-1][1] / h[-2][1] - 1) * 100, "date": h[-1][0]})
+    if not macro and len(fxh) > 1:   # older data.json without the macro block
+        macro.append({"k": "USDTRY", "name": "USD/TRY", "unit": "TL", "dec": 2, "last": fxh[-1][1], "d1": fx1, "date": fxh[-1][0]})
+
     return {"day": day, "rows": rows, "flags": [t for _, t in flags[:6]], "xu": xu, "g_now": g_now, "g1": g1,
-            "beat": beat, "best": best, "worst": worst, "fx": fxh[-1][1], "fx1": fx1, "nav": nav, "glob": glob,
+            "beat": beat, "best": best, "worst": worst, "fx": fxh[-1][1], "fx1": fx1, "nav": nav, "glob": glob, "macro": macro,
             "updated_at": D.get("updated_at")}
 
 
@@ -263,7 +276,7 @@ def tile(label, value, sub):
 
 def render(R, now, final, logo_src, final_note):
     day = tr_date(R["day"])
-    title = f"Gün sonu · {day}" if final else f"Gün içi durum · {day}"
+    title = f"Gün Sonu Değerlendirme · {day}" if final else f"Gün içi durum · {day}"
     ce = lambda v: f"<span style='color:{color(v)}'>{pct(v)}</span>"
     tiles = (tile("Grup piyasa değeri", money_tl(R["g_now"]), ce(R["g1"]) + " bugün")
              + "<td width='8' style='font-size:0'>&nbsp;</td>"
@@ -323,13 +336,21 @@ def render(R, now, final, logo_src, final_note):
         m1 = nv["now"] - nv["m1"] if nv["m1"] is not None else None
         parts = []
         if ch is not None and abs(ch) >= 0.05:
-            parts.append(f"bugün {num(ch, 1)} puan {'açıldı' if ch > 0 else 'daraldı'}")
+            parts.append(f"bugün {num(ch, 1)} puan {'arttı' if ch > 0 else 'azaldı'}")
         if m1 is not None:
-            parts.append(f"son 1 ayda {num(m1, 1)} puan {'açıldı' if m1 > 0 else 'daraldı'}")
+            parts.append(f"son 1 ayda {num(m1, 1)} puan {'arttı' if m1 > 0 else 'azaldı'}")
         other.append(("Gözde NAD iskontosu", f"<b>%{num(nv['now'], 0)}</b>" + (" · " + " · ".join(parts) if parts else "")))
-    other.append(("USD/TRY", f"<b>{num(R['fx'], 2)}</b> {ce(R['fx1'])}".replace(pct(R['fx1']), pct(R['fx1'], 2))))
     other_html = "".join(f"<tr><td style='padding:10px 0;border-top:1px solid {LINE}'><div style='font-size:11.5px;color:{MUTED}'>{k}</div>"
                          f"<div style='font-size:14px;margin-top:2px;line-height:1.5'>{v}</div></td></tr>" for k, v in other)
+    macro_html = ""
+    for m in R.get("macro") or []:
+        dd = 2 if m["unit"] == "TL" else 1
+        old_note = f"<div style='font-size:11px;color:{MUTED}'>son işlem {tr_date(m['date'])}</div>" if m["date"] != R["day"] else ""
+        macro_html += (f"<tr><td style='padding:9px 0;border-top:1px solid {LINE}'><div style='font-size:14px;font-weight:600'>{m['name']}</div>"
+                       f"<div style='font-size:11.5px;color:{MUTED}'>{m['unit']}</div></td>"
+                       f"<td align='right' style='padding:9px 10px 9px 0;border-top:1px solid {LINE};font-size:14px;font-weight:700;white-space:nowrap'>{num(m['last'], m['dec'])}{old_note}</td>"
+                       f"<td align='right' width='84' style='padding:9px 0;border-top:1px solid {LINE};white-space:nowrap'>"
+                       f"<span style='color:{color(m['d1'])};font-weight:700;font-size:14px'>{pct(m['d1'], dd)}</span></td></tr>")
     upd = dt.datetime.fromisoformat(R["updated_at"]).astimezone(IST).strftime("%d.%m.%Y %H:%M") if R.get("updated_at") else "–"
     stale = ""
     if R.get("updated_at") and (now - dt.datetime.fromisoformat(R["updated_at"])).total_seconds() > 2 * 3600:
@@ -343,8 +364,9 @@ def render(R, now, final, logo_src, final_note):
 <tr><td style="padding:18px 16px 20px">
 <table cellspacing="0" cellpadding="0" role="presentation"><tr>
 <td valign="middle" style="padding-right:10px"><img src="{logo_src}" width="32" height="32" alt="Yıldız" style="display:block;border:0"></td>
-<td valign="middle"><div style="font-size:11px;letter-spacing:.12em;color:{MUTED};font-weight:600">YILDIZ HOLDİNG · BORSA PANELİ</div>
-<div style="font-size:20px;font-weight:700;line-height:1.25">{title}</div></td></tr></table>
+<td valign="middle"><div style="font-size:11px;letter-spacing:.12em;color:{MUTED};font-weight:600">YILDIZ HOLDİNG</div>
+<div style="font-size:20px;font-weight:700;line-height:1.25">{"Gün Sonu Değerlendirme" if final else "Gün içi durum"}</div>
+<div style="font-size:13px;color:{MUTED};margin-top:1px">{day} · Hisse Performans Dashboard</div></td></tr></table>
 {status}
 <div style="height:14px"></div>{stale}
 <table width="100%" cellspacing="0" cellpadding="0" role="presentation"><tr>{tiles}</tr></table>
@@ -354,16 +376,18 @@ def render(R, now, final, logo_src, final_note):
 {h2("Şirketler")}
 {table_html if COMPANY_LAYOUT == "table" else f'<table width="100%" cellspacing="0" cellpadding="0" role="presentation">{cards}</table>'}
 <p style="font-size:11.5px;color:{MUTED};margin:6px 0 0;line-height:1.45">p = puan. Sektöre / rakiplere göre: şirketin bugünkü getirisi ile sektör endeksinin / rakip endeksinin getirisi arasındaki fark. Ülker ve Makina Takım için rakip endeksi yok.</p>
-{h2("Diğer")}
-<table width="100%" cellspacing="0" cellpadding="0" role="presentation">{other_html}</table>
+{(h2("Diğer") + f'<table width="100%" cellspacing="0" cellpadding="0" role="presentation">{other_html}</table>') if other_html else ""}
+{(h2("Makro göstergeler") + f'<table width="100%" cellspacing="0" cellpadding="0" role="presentation"><tr><td style="font-size:11px;color:{MUTED};padding:0 0 6px"></td><td align="right" style="font-size:11px;color:{MUTED};padding:0 10px 6px 0">Son değer</td><td align="right" style="font-size:11px;color:{MUTED};padding:0 0 6px">Günlük</td></tr>{macro_html}</table>'
+   + f"<p style='font-size:11.5px;color:{MUTED};margin:6px 0 0;line-height:1.45'>Rapor saatindeki son değerler; günlük değişim bir önceki kapanışa göre. Emtialar en yakın vadeli kontrat fiyatıdır; yurt dışı piyasalar bu saatte açık olabilir. Palm yağı ringgit fiyatından USD'ye çevrilir.</p>") if macro_html else ""}
 <table cellspacing="0" cellpadding="0" role="presentation" style="margin-top:20px"><tr><td style="background:{PANEL_BTN};border-radius:8px">
 <a href="{PANEL}" style="display:inline-block;padding:11px 18px;color:#ffffff;text-decoration:none;font-weight:700;font-size:14px">Paneli aç</a></td></tr></table>
 <p style="font-size:11.5px;color:{MUTED};margin:18px 0 0;line-height:1.5">Bu rapor panelin robotu tarafından kapanış verisiyle otomatik hazırlanır; yapay zekâ kullanılmaz, metinler sabit kurallarla üretilir. Veri {upd} itibarıyla (TradingView, Yahoo Finance). Bilgi amaçlıdır, yatırım tavsiyesi değildir.</p>
 </td></tr></table></div>"""
-    subject = f"Yıldız borsa özeti · {day} · Grup {pct(R['g1'])} · BIST 100 {pct(R['xu'].get('1D'))}"
+    subject = f"Gün Sonu Değerlendirme · {day} · Grup {pct(R['g1'])} · BIST 100 {pct(R['xu'].get('1D'))}"
     text = (f"{title}\n\nGrup piyasa değeri {money_tl(R['g_now'])} ({pct(R['g1'])}), BIST 100 {pct(R['xu'].get('1D'))}.\n"
             f"Günün en iyi performansı {R['best']['t']} ({pct(R['best']['r']['1D'])}), en düşük performansı {R['worst']['t']} ({pct(R['worst']['r']['1D'])}).\n\n"
             + "\n".join(f"{x['t']}: {num(x['close'], 2)} TL, {pct(x['r'].get('1D'))} (sektöre göre {pts(x['diff'])})" for x in R["rows"])
+            + ("\n\nMakro göstergeler:\n" + "\n".join(f"{m['name']}: {num(m['last'], m['dec'])} {m['unit']} ({pct(m['d1'], 2 if m['unit'] == 'TL' else 1)})" for m in R.get("macro") or []) if R.get("macro") else "")
             + f"\n\nPanel: {PANEL}\nBilgi amaçlıdır, yatırım tavsiyesi değildir.")
     return subject, body, text
 
@@ -397,7 +421,7 @@ def send(subject, html, text, png, test=False):
     rcpt = [a.strip() for a in to.split(",") if a.strip()]
     msg = MIMEMultipart("related")
     msg["Subject"] = ("[TEST] " if test else "") + subject
-    msg["From"] = formataddr(("Yıldız Borsa Paneli", user))
+    msg["From"] = formataddr(("Yıldız Hisse Performans Dashboard", user))
     msg["To"] = ", ".join(rcpt)
     alt = MIMEMultipart("alternative")
     alt.attach(MIMEText(text, "plain", "utf-8"))
