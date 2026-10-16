@@ -4,7 +4,8 @@ Builds data.json for the Yıldız Holding stock dashboard.
 Sources (all free, no API key):
   - TradingView chart websocket  -> daily history for stocks and BIST indices
   - TradingView scanner          -> market cap, P/E, P/B, shares, sector peers
-  - Yahoo Finance chart API      -> live USD/TRY (+ fallback history for stocks)
+  - Yahoo Finance chart API      -> live USD/TRY (+ fallback history for stocks),
+                                    global peers/indices, macro page (FX, cocoa, Brent, wheat, gold)
 
 If a source fails, the previous value from the existing data.json is kept,
 so the dashboard never goes blank because of one bad run.
@@ -166,6 +167,31 @@ GLOBAL_SECTOR = {
                           ["RI", "Pernod Ricard", 2.85], ["CCH", "Coca-Cola HBC", 2.51], ["CARL B", "Carlsberg", 2.45]]},
 }
 GLOBAL_FX = {"CHF": "CHFUSD=X", "EUR": "EURUSD=X"}
+
+# Makro Göstergeler page. Futures are the nearest (front-month) contract, unadjusted, so a
+# contract roll can show as a small jump. "usd": how the USD-based index chart sees the item
+# ("inv" = 1/price, i.e. the USD value of 1 TL; a Yahoo symbol = that series; None = price is already USD).
+# "mult" converts the quote into the display unit (wheat: US cents/bushel -> USD/ton).
+MACRO = [
+    {"k": "USDTRY", "name": "USD/TRY", "unit": "TL", "dec": 2, "yahoo": "USDTRY=X", "tv_last": "FX_IDC:USDTRY",
+     "usd": "inv", "usd_name": "Türk lirası", "src": "Yahoo · anlık kur TradingView"},
+    {"k": "EURTRY", "name": "EUR/TRY", "unit": "TL", "dec": 2, "yahoo": "EURTRY=X", "tv_last": "FX_IDC:EURTRY",
+     "usd": "EURUSD=X", "usd_name": "Euro", "src": "Yahoo · anlık kur TradingView"},
+    {"k": "GBPTRY", "name": "GBP/TRY", "unit": "TL", "dec": 2, "yahoo": "GBPTRY=X", "tv_last": "FX_IDC:GBPTRY",
+     "usd": "GBPUSD=X", "usd_name": "Sterlin", "src": "Yahoo · anlık kur TradingView"},
+    {"k": "COCOA", "name": "Kakao", "unit": "USD/ton", "dec": 0, "yahoo": "CC=F", "usd": None, "usd_name": "Kakao",
+     "src": "Yahoo · ICE New York kakao vadeli (CC=F), en yakın vade"},
+    {"k": "PALM", "name": "Palm yağı", "unit": "USD/ton", "dec": 0, "tv": "MYX:FCPO1!", "ccy": "MYR", "fx": "MYR=X",
+     "usd": None, "usd_name": "Palm yağı",
+     "src": "TradingView · Bursa Malaysia ham palm yağı vadeli (FCPO), en yakın vade; ringgit fiyatı günün USD/MYR kuruyla USD'ye çevrilir"},
+    {"k": "BRENT", "name": "Brent petrol", "unit": "USD/varil", "dec": 2, "yahoo": "BZ=F", "usd": None, "usd_name": "Brent petrol",
+     "src": "Yahoo · ICE Brent vadeli (BZ=F), en yakın vade"},
+    {"k": "WHEAT", "name": "Buğday", "unit": "USD/ton", "dec": 0, "yahoo": "ZW=F", "mult": 0.367437, "usd": None, "usd_name": "Buğday",
+     "src": "Yahoo · CBOT Chicago buğday vadeli (ZW=F), en yakın vade; sent/buşel fiyatı USD/ton'a çevrilir (1 ton = 36,74 buşel)"},
+    {"k": "GOLD", "name": "Altın", "unit": "USD/ons", "dec": 0, "yahoo": "GC=F", "usd": None, "usd_name": "Altın",
+     "src": "Yahoo · COMEX altın vadeli (GC=F), en yakın vade"},
+]
+MACRO_REPORT = ["USDTRY", "COCOA", "PALM", "BRENT"]   # shown at the bottom of the end-of-day report
 GLOBAL_CAP = 0.25
 
 # NAV (net aktif değer) discount for investment trusts: NAV = balance-sheet equity (fair-value accounting).
@@ -613,6 +639,70 @@ def main():
         warnings.append(f"global: {e}")
         log("global FAILED", e)
 
+    # ---- Makro göstergeler ----
+    import bisect
+    prev_macro = {m["k"]: m for m in prev.get("macro", {}).get("items", [])}
+
+    def on_or_before(hist):
+        keys = [d for d, _ in hist]
+        vals = [v for _, v in hist]
+        def f(d):
+            i = bisect.bisect_right(keys, d) - 1
+            return vals[i] if i >= 0 else None
+        return f
+
+    macro_items = []
+    for cfg in MACRO:
+        k = cfg["k"]
+        try:
+            t_last = None
+            if cfg.get("yahoo"):
+                if k == "USDTRY" and fx.get("history"):
+                    hist = [list(r) for r in fx["history"]][-BARS:]
+                else:
+                    bars, meta = retry(yahoo_chart, cfg["yahoo"])
+                    hist = series(bars)[-BARS:]
+                    t_last = meta.get("regularMarketTime")
+            else:
+                bars = retry(fetch_history, cfg["tv"], BARS)
+                hist = series(bars)[-BARS:]
+                t_last = bars[-1][0]
+            if cfg.get("ccy"):           # local-currency quote -> USD (USD/MYR on or before each day)
+                fbars, _ = retry(yahoo_chart, cfg["fx"])
+                rate = on_or_before(series(fbars))
+                hist = [[d, round(v / rate(d), 4)] for d, v in hist if rate(d)]
+            if cfg.get("mult"):
+                hist = [[d, round(v * cfg["mult"], 4)] for d, v in hist]
+            if cfg.get("tv_last"):       # Yahoo's live FX tick is occasionally noisy; use TradingView's latest hourly close
+                try:
+                    hb = retry(fetch_history, cfg["tv_last"], 5, resolution="60")
+                    if to_date(hb[-1][0]) == hist[-1][0]:
+                        hist[-1][1] = round(hb[-1][1], 4)
+                        t_last = time.time()
+                except Exception as e:  # noqa: BLE001
+                    log("macro live TV failed, keeping Yahoo", k, e)
+            if k == "USDTRY" and fx.get("last") and hist:
+                hist[-1][1] = fx["last"]
+            # USD view for the index chart
+            if cfg["usd"] == "inv":
+                hist_usd = [[d, round(1 / v, 6)] for d, v in hist if v]
+            elif cfg["usd"]:
+                ubars, _ = retry(yahoo_chart, cfg["usd"])
+                hist_usd = series(ubars)[-BARS:]
+            else:
+                hist_usd = None          # already USD: the page uses "history"
+            item = {kk: cfg[kk] for kk in ("k", "name", "unit", "dec", "usd_name", "src")}
+            item.update({"last": hist[-1][1], "time": dt.datetime.fromtimestamp(t_last, dt.timezone.utc).isoformat(timespec="minutes") if t_last else None,
+                         "history": hist, "history_usd": hist_usd})
+            macro_items.append(item)
+            log("macro", k, len(hist), hist[-1], "usd pts", len(hist_usd or hist))
+        except Exception as e:  # noqa: BLE001
+            warnings.append(f"makro {k}: {e}")
+            log("macro FAILED", k, e)
+            if k in prev_macro:
+                macro_items.append(prev_macro[k])
+    macro = {"items": macro_items, "report": MACRO_REPORT}
+
     # ---- NAV discount (GSYO) ----
     nav = prev.get("nav", {})
     try:
@@ -665,6 +755,7 @@ def main():
         "companies": companies,
         "peers": {t: {k: v for k, v in p.items()} for t, p in peers.items()},
         "global": glob,
+        "macro": macro,
         "nav": nav,
         "xbank_members": bank_list,
         "warnings": warnings,
