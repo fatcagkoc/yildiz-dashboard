@@ -168,7 +168,10 @@ GLOBAL_SECTOR = {
 }
 GLOBAL_FX = {"CHF": "CHFUSD=X", "EUR": "EURUSD=X"}
 
-# Makro Göstergeler page. Futures are the nearest (front-month) contract, unadjusted, so a
+# Makro Göstergeler page. Commodities come from TradingView continuous front-month contracts (daily close =
+# exchange settlement). Yahoo's "=F" futures were dropped as the primary source: on 16.10.2026 BZ=F switched
+# between two contract months intraday (105.4 -> 102.7 -> 105.1), so its live price was not reliable; Yahoo is
+# kept only as a fallback. Futures are the nearest (front-month) contract, unadjusted, so a
 # contract roll can show as a small jump. "usd": how the USD-based index chart sees the item
 # ("inv" = 1/price, i.e. the USD value of 1 TL; a Yahoo symbol = that series; None = price is already USD).
 # "mult" converts the quote into the display unit (wheat: US cents/bushel -> USD/ton).
@@ -179,17 +182,17 @@ MACRO = [
      "usd": "EURUSD=X", "usd_name": "Euro", "src": "Yahoo · anlık kur TradingView"},
     {"k": "GBPTRY", "name": "GBP/TRY", "unit": "TL", "dec": 2, "yahoo": "GBPTRY=X", "tv_last": "FX_IDC:GBPTRY",
      "usd": "GBPUSD=X", "usd_name": "Sterlin", "src": "Yahoo · anlık kur TradingView"},
-    {"k": "COCOA", "name": "Kakao", "unit": "USD/ton", "dec": 0, "yahoo": "CC=F", "usd": None, "usd_name": "Kakao",
-     "src": "Yahoo · ICE New York kakao vadeli (CC=F), en yakın vade"},
+    {"k": "COCOA", "name": "Kakao", "unit": "USD/ton", "dec": 0, "tv": "ICEUS:CC1!", "yahoo_fb": "CC=F", "usd": None, "usd_name": "Kakao",
+     "src": "TradingView · ICE New York kakao vadeli (CC1!), en yakın vade"},
     {"k": "PALM", "name": "Palm yağı", "unit": "USD/ton", "dec": 0, "tv": "MYX:FCPO1!", "ccy": "MYR", "fx": "MYR=X",
      "usd": None, "usd_name": "Palm yağı",
      "src": "TradingView · Bursa Malaysia ham palm yağı vadeli (FCPO), en yakın vade; ringgit fiyatı günün USD/MYR kuruyla USD'ye çevrilir"},
-    {"k": "BRENT", "name": "Brent petrol", "unit": "USD/varil", "dec": 2, "yahoo": "BZ=F", "usd": None, "usd_name": "Brent petrol",
-     "src": "Yahoo · ICE Brent vadeli (BZ=F), en yakın vade"},
-    {"k": "WHEAT", "name": "Buğday", "unit": "USD/ton", "dec": 0, "yahoo": "ZW=F", "mult": 0.367437, "usd": None, "usd_name": "Buğday",
-     "src": "Yahoo · CBOT Chicago buğday vadeli (ZW=F), en yakın vade; sent/buşel fiyatı USD/ton'a çevrilir (1 ton = 36,74 buşel)"},
-    {"k": "GOLD", "name": "Altın", "unit": "USD/ons", "dec": 0, "yahoo": "GC=F", "usd": None, "usd_name": "Altın",
-     "src": "Yahoo · COMEX altın vadeli (GC=F), en yakın vade"},
+    {"k": "BRENT", "name": "Brent petrol", "unit": "USD/varil", "dec": 2, "tv": "ICEEUR:BRN1!", "yahoo_fb": "BZ=F", "usd": None, "usd_name": "Brent petrol",
+     "src": "TradingView · ICE Brent vadeli (BRN1!), en yakın vade"},
+    {"k": "WHEAT", "name": "Buğday", "unit": "USD/ton", "dec": 0, "tv": "CBOT:ZW1!", "yahoo_fb": "ZW=F", "mult": 0.367437, "usd": None, "usd_name": "Buğday",
+     "src": "TradingView · CBOT Chicago buğday vadeli (ZW1!), en yakın vade; sent/buşel fiyatı USD/ton'a çevrilir (1 ton = 36,74 buşel)"},
+    {"k": "GOLD", "name": "Altın", "unit": "USD/ons", "dec": 0, "tv": "COMEX:GC1!", "yahoo_fb": "GC=F", "usd": None, "usd_name": "Altın",
+     "src": "TradingView · COMEX altın vadeli (GC1!), en yakın vade"},
 ]
 MACRO_REPORT = ["USDTRY", "COCOA", "PALM", "BRENT"]   # shown at the bottom of the end-of-day report
 GLOBAL_CAP = 0.25
@@ -226,6 +229,17 @@ def series(bars):
     out = {}
     for t, c in bars:
         out[to_date(t)] = round(c, 4)
+    return [[d, v] for d, v in sorted(out.items())]
+
+
+def tv_daily(bars):
+    """Daily futures bars from TradingView -> [[trading date, close]].
+    TradingView stamps a futures day with its session open, which for many contracts is the previous
+    evening (Bursa Malaysia palm oil: 13:00 UTC the day before; COMEX gold: 22:00 UTC the day before;
+    ICE/CBOT: 00:00 UTC; ICE cocoa: 08:45 UTC). Adding 12 hours maps every one of them to its trading date."""
+    out = {}
+    for t, c in bars:
+        out[(dt.datetime.fromtimestamp(t, dt.timezone.utc) + dt.timedelta(hours=12)).date().isoformat()] = round(c, 4)
     return [[d, v] for d, v in sorted(out.items())]
 
 
@@ -656,17 +670,24 @@ def main():
         k = cfg["k"]
         try:
             t_last = None
-            if cfg.get("yahoo"):
+            hist = None
+            if cfg.get("tv"):
+                try:
+                    bars = retry(fetch_history, cfg["tv"], BARS)
+                    hist = tv_daily(bars)[-BARS:]
+                    t_last = time.time()
+                except Exception as e:  # noqa: BLE001
+                    if not cfg.get("yahoo_fb"):
+                        raise
+                    log("macro TV failed, falling back to Yahoo", k, e)
+                    warnings.append(f"makro {k}: TradingView alınamadı, Yahoo kullanıldı")
+            if hist is None:
                 if k == "USDTRY" and fx.get("history"):
                     hist = [list(r) for r in fx["history"]][-BARS:]
                 else:
-                    bars, meta = retry(yahoo_chart, cfg["yahoo"])
+                    bars, meta = retry(yahoo_chart, cfg.get("yahoo") or cfg["yahoo_fb"])
                     hist = series(bars)[-BARS:]
                     t_last = meta.get("regularMarketTime")
-            else:
-                bars = retry(fetch_history, cfg["tv"], BARS)
-                hist = series(bars)[-BARS:]
-                t_last = bars[-1][0]
             if cfg.get("ccy"):           # local-currency quote -> USD (USD/MYR on or before each day)
                 fbars, _ = retry(yahoo_chart, cfg["fx"])
                 rate = on_or_before(series(fbars))
