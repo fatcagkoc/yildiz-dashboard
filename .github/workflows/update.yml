@@ -27,7 +27,11 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
+      # Always the newest commit on main (not the commit from the moment the run was triggered),
+      # so a run that waited in the queue sees what the previous run saved (e.g. "report sent today").
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - uses: actions/setup-python@v5
         with:
@@ -39,6 +43,14 @@ jobs:
       - name: Verileri cek
         continue-on-error: true
         run: python fetch_data.py
+
+      # Second guard against a double e-mail: read the latest "sent today" record right before the report step.
+      - name: Son rapor durumunu al
+        continue-on-error: true
+        run: |
+          git fetch --depth=1 origin main
+          git checkout FETCH_HEAD -- report_state.json 2>/dev/null || true
+          cat report_state.json 2>/dev/null || echo "report_state.json yok"
 
       - name: Gun sonu raporu
         continue-on-error: true
