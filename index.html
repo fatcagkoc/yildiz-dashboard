@@ -60,10 +60,14 @@ a{color:inherit}
 .top .seg button{color:var(--hdr-muted)}
 .top .seg button[aria-pressed="true"]{background:#24395c;color:#fff;box-shadow:none}
 .tape{border-top:1px solid var(--hdr-line);background:var(--hdr2)}
-.tape-inner{max-width:1200px;margin:0 auto;padding:0 16px;display:flex;overflow-x:auto;scrollbar-width:none}
+.tape-inner{display:flex;overflow-x:auto;scrollbar-width:none;cursor:grab;user-select:none;-webkit-user-select:none;
+  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 28px,#000 calc(100% - 28px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 28px,#000 calc(100% - 28px),transparent 100%)}
 .tape-inner::-webkit-scrollbar{display:none}
+.tape-inner.drag{cursor:grabbing}
+.tape-inner.drag .tk-chip{pointer-events:none}
+.tk-set{display:flex;flex:none;padding-left:16px}
+.tk-chip img{-webkit-user-drag:none}
 .tk-chip{display:flex;align-items:center;gap:8px;padding:9px 16px 9px 0;margin-right:16px;border-right:1px solid var(--hdr-line);white-space:nowrap;cursor:pointer;text-decoration:none;color:#fff;font-size:13px}
-.tk-chip:last-child{border-right:0}
 .tk-chip b{font-weight:600}
 .tk-chip .p{color:var(--hdr-muted)}
 .tk-chip .c.pos{color:#4fd47e}.tk-chip .c.neg{color:#ff7d74}
@@ -552,8 +556,48 @@ function computeRows(){const D=state.data;const bm={};for(const k in D.benchmark
   return {bm,rows:D.companies.map(c=>{const h=conv(c.history),fx=state.cur==='USD'?fxAt(c.history.at(-1)[0]):1;
     return {c,h,r:returns(h),last:h.at(-1)[1],mcap:c.mcap/fx,b:bm[c.bench]}})};}
 function renderTape(rows,bm){const D=state.data;const x=D.benchmarks.XU100.history;const xr=(x.at(-1)[1]/x.at(-2)[1]-1)*100;
-  $('tape').innerHTML=`<a class="tk-chip" href="#grup"><b>BIST 100</b><span class="p num">${nf(0).format(x.at(-1)[1])}</span><span class="c num ${cls(xr)}">${pct(xr)}</span></a>`+
-  rows.map(r=>`<a class="tk-chip" href="#sirket/${r.c.ticker}">${logo(r.c,20)}<b>${r.c.ticker}</b><span class="p num">${money(r.last,false)}</span><span class="c num ${cls(r.r['1D'])}">${pct(r.r['1D'])}</span></a>`).join('');}
+  tapeBuild(`<a class="tk-chip" href="#grup"><b>BIST 100</b><span class="p num">${nf(0).format(x.at(-1)[1])}</span><span class="c num ${cls(xr)}">${pct(xr)}</span></a>`+
+  rows.map(r=>`<a class="tk-chip" href="#sirket/${r.c.ticker}">${logo(r.c,20)}<b>${r.c.ticker}</b><span class="p num">${money(r.last,false)}</span><span class="c num ${cls(r.r['1D'])}">${pct(r.r['1D'])}</span></a>`).join(''));}
+
+
+/* ---------- ticker tape: slow continuous scroll like a TV news strip ----------
+   The chips are repeated (n copies) so the strip loops seamlessly. It moves on its own; it stops while the
+   mouse is over it, while it is dragged (mouse) or touched/swiped (phone), and starts again a moment later. */
+const TAPE={html:'',n:0,pos:0,set:0,w:0,hover:false,drag:null,moved:false,until:0,last:0,speed:30,
+  reduce:matchMedia('(prefers-reduced-motion: reduce)').matches};
+function tapeBuild(html){const el=$('tape');
+  if(html===TAPE.html&&el.childElementCount)return;          // nothing changed: keep the strip moving
+  TAPE.html=html;el.innerHTML=`<div class="tk-set">${html}</div>`;tapeFill();}
+function tapeFill(){const el=$('tape'),w=el.firstElementChild?el.firstElementChild.offsetWidth:0;if(!w)return;
+  const n=Math.max(3,Math.ceil(el.clientWidth/w)+2);
+  if(n!==TAPE.n||el.childElementCount!==n||w!==TAPE.w){const frac=TAPE.w?((TAPE.pos%TAPE.w)/TAPE.w):0;
+    el.innerHTML=Array.from({length:n},(_,i)=>`<div class="tk-set"${i?' aria-hidden="true"':''}>${TAPE.html}</div>`).join('');
+    el.querySelectorAll('.tk-set[aria-hidden] a').forEach(a=>a.tabIndex=-1);
+    TAPE.n=n;TAPE.w=w;TAPE.pos=w+frac*w;tapeApply();}}
+function tapeWrap(){const w=TAPE.w;if(!w)return;while(TAPE.pos>=2*w)TAPE.pos-=w;while(TAPE.pos<w)TAPE.pos+=w}
+function tapeApply(){const el=$('tape');tapeWrap();TAPE.set=Math.round(TAPE.pos);el.scrollLeft=TAPE.set}
+function tapeHold(ms){TAPE.until=performance.now()+ms}
+function tapeTick(t){const dt=TAPE.last?Math.min(t-TAPE.last,100):0;TAPE.last=t;
+  if(TAPE.w&&!TAPE.reduce&&!TAPE.hover&&!TAPE.drag&&t>TAPE.until){TAPE.pos+=TAPE.speed*dt/1000;tapeApply()}
+  requestAnimationFrame(tapeTick)}
+(function(){const el=$('tape');
+  el.addEventListener('scroll',()=>{if(Math.abs(el.scrollLeft-TAPE.set)>1){   // moved by a finger or trackpad, not by us
+    TAPE.pos=el.scrollLeft;tapeHold(3000);const before=TAPE.pos;tapeWrap();if(TAPE.pos!==before)tapeApply();else TAPE.set=el.scrollLeft}},{passive:true});
+  el.addEventListener('pointerenter',e=>{if(e.pointerType==='mouse')TAPE.hover=true});
+  el.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'){TAPE.hover=false;if(!TAPE.drag)tapeHold(1200)}});
+  el.addEventListener('touchstart',()=>tapeHold(1e9),{passive:true});
+  el.addEventListener('touchend',()=>tapeHold(3000),{passive:true});
+  el.addEventListener('touchcancel',()=>tapeHold(3000),{passive:true});
+  // mouse: grab and drag the strip
+  el.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse'||e.button!==0)return;TAPE.drag={x:e.clientX,p:TAPE.pos,id:e.pointerId};TAPE.moved=false});
+  el.addEventListener('pointermove',e=>{if(!TAPE.drag)return;const dx=e.clientX-TAPE.drag.x;if(!TAPE.moved&&Math.abs(dx)>4){TAPE.moved=true;el.classList.add('drag');try{el.setPointerCapture(TAPE.drag.id)}catch(_){}}
+    if(TAPE.moved){TAPE.pos=TAPE.drag.p-dx;tapeApply()}});
+  const end=e=>{if(!TAPE.drag)return;TAPE.drag=null;el.classList.remove('drag');tapeHold(1200);if(TAPE.moved)setTimeout(()=>{TAPE.moved=false},0)};
+  el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
+  el.addEventListener('click',e=>{if(TAPE.moved){e.preventDefault();e.stopPropagation();TAPE.moved=false}},true);   // a drag is not a click
+  el.addEventListener('dragstart',e=>e.preventDefault());
+  addEventListener('resize',()=>{TAPE.n=0;tapeFill()});
+  requestAnimationFrame(tapeTick);})();
 
 /* ---------- GRUP page ---------- */
 function renderGroup(rows,bm){const D=state.data;
