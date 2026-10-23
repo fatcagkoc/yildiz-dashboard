@@ -195,6 +195,14 @@ MACRO = [
      "src": "TradingView · COMEX altın vadeli (GC1!), en yakın vade"},
 ]
 MACRO_REPORT = ["USDTRY", "COCOA", "PALM", "BRENT"]   # shown at the bottom of the end-of-day report
+MACRO_YEARS = 5          # the Makro page offers 3Y and 5Y ranges, so macro histories go back 5 years (+ a 2-week buffer)
+MACRO_TV_BARS = 1400     # ~5.5 years of daily futures bars
+
+
+def macro_cut(hist):
+    """Keep the last MACRO_YEARS of a [[date, value]] series (plus 2 weeks so a 5Y return has a base point)."""
+    start = (dt.date.today() - dt.timedelta(days=365 * MACRO_YEARS + 14)).isoformat()
+    return [r for r in hist if r[0] >= start]
 GLOBAL_CAP = 0.25
 
 # NAV (net aktif değer) discount for investment trusts: NAV = balance-sheet equity (fair-value accounting).
@@ -673,8 +681,8 @@ def main():
             hist = None
             if cfg.get("tv"):
                 try:
-                    bars = retry(fetch_history, cfg["tv"], BARS)
-                    hist = tv_daily(bars)[-BARS:]
+                    bars = retry(fetch_history, cfg["tv"], MACRO_TV_BARS)
+                    hist = macro_cut(tv_daily(bars))
                     t_last = time.time()
                 except Exception as e:  # noqa: BLE001
                     if not cfg.get("yahoo_fb"):
@@ -682,14 +690,11 @@ def main():
                     log("macro TV failed, falling back to Yahoo", k, e)
                     warnings.append(f"makro {k}: TradingView alınamadı, Yahoo kullanıldı")
             if hist is None:
-                if k == "USDTRY" and fx.get("history"):
-                    hist = [list(r) for r in fx["history"]][-BARS:]
-                else:
-                    bars, meta = retry(yahoo_chart, cfg.get("yahoo") or cfg["yahoo_fb"])
-                    hist = series(bars)[-BARS:]
-                    t_last = meta.get("regularMarketTime")
+                bars, meta = retry(yahoo_chart, cfg.get("yahoo") or cfg["yahoo_fb"], "10y")
+                hist = macro_cut(series(bars))
+                t_last = meta.get("regularMarketTime")
             if cfg.get("ccy"):           # local-currency quote -> USD (USD/MYR on or before each day)
-                fbars, _ = retry(yahoo_chart, cfg["fx"])
+                fbars, _ = retry(yahoo_chart, cfg["fx"], "10y")
                 rate = on_or_before(series(fbars))
                 hist = [[d, round(v / rate(d), 4)] for d, v in hist if rate(d)]
             if cfg.get("mult"):
@@ -708,8 +713,8 @@ def main():
             if cfg["usd"] == "inv":
                 hist_usd = [[d, round(1 / v, 6)] for d, v in hist if v]
             elif cfg["usd"]:
-                ubars, _ = retry(yahoo_chart, cfg["usd"])
-                hist_usd = series(ubars)[-BARS:]
+                ubars, _ = retry(yahoo_chart, cfg["usd"], "10y")
+                hist_usd = macro_cut(series(ubars))
             else:
                 hist_usd = None          # already USD: the page uses "history"
             item = {kk: cfg[kk] for kk in ("k", "name", "unit", "dec", "usd_name", "src")}
