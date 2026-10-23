@@ -225,6 +225,10 @@ tr.me .dbar i{opacity:1}
 .warn{display:none;margin-bottom:12px;padding:10px 12px;border-radius:8px;background:var(--down-bg);color:var(--down);font-size:13px}
 .dwarn{display:none;margin-bottom:12px;padding:8px 12px;border-radius:8px;background:var(--surface2);color:var(--text2);font-size:12.5px}
 .dwarn summary{cursor:pointer}.dwarn ul{margin:6px 0 0;padding-left:18px}
+.kpi.pick{cursor:pointer;transition:box-shadow .15s}
+.kpi.pick:hover{box-shadow:0 0 0 1px var(--accent) inset}
+.kpi.pick.on{box-shadow:0 0 0 2px var(--accent) inset}
+#mxBody tr.on td{background:var(--surface2)}
 .kpi .val small{font-size:13px;font-weight:600;color:var(--text2);margin-left:5px;letter-spacing:0}
 .mx-picker{margin:4px 0 12px}
 .mx-picker button{padding:6px 12px;font-weight:600}
@@ -441,7 +445,7 @@ tr.me .dbar i{opacity:1}
       <p class="hint">Döviz kurları TL, emtialar USD cinsinden. Emtialar en yakın vadeli kontrat fiyatıdır. Grafikte görmek için satıra tıklayın.</p>
       <div class="tbl-wrap">
         <table class="num">
-          <thead><tr><th>Gösterge</th><th>Fiyat</th><th>1 Gün</th><th>1 Ay</th><th>Yılbaşından beri</th><th>1 Yıl</th></tr></thead>
+          <thead><tr><th>Gösterge</th><th>Fiyat</th><th>1 Gün</th><th>1 Ay</th><th>Yılbaşından beri</th><th>1 Yıl</th><th>3 Yıl</th><th>5 Yıl</th></tr></thead>
           <tbody id="mxBody" class="click"></tbody>
         </table>
       </div>
@@ -466,7 +470,7 @@ tr.me .dbar i{opacity:1}
       <div class="chart" id="mxIxChart"></div>
       <div class="tbl-wrap" style="margin-top:14px">
         <table class="num cmp-tbl">
-          <thead><tr><th>USD bazında</th><th>1 Gün</th><th>1 Ay</th><th>Yılbaşından beri</th><th>1 Yıl</th></tr></thead>
+          <thead><tr><th>USD bazında</th><th>1 Gün</th><th>1 Ay</th><th>Yılbaşından beri</th><th>1 Yıl</th><th>3 Yıl</th><th>5 Yıl</th></tr></thead>
           <tbody id="mxIxBody"></tbody>
         </table>
       </div>
@@ -506,7 +510,7 @@ function conv(hist){if(state.cur==='TRY')return hist;
 function shiftDate(iso,{m=0,d=0}){ // month-safe: 31 Mar −1 ay = 28/29 Şub (not 3 Mar)
   const [y,mo,da]=iso.slice(0,10).split('-').map(Number);let M=mo-1-m,Y=y+Math.floor(M/12);M=((M%12)+12)%12;
   const dim=new Date(Date.UTC(Y,M+1,0)).getUTCDate();const x=new Date(Date.UTC(Y,M,Math.min(da,dim)));x.setUTCDate(x.getUTCDate()-d);return x.toISOString().slice(0,10)}
-function baseDate(last,k){if(k==='1H')return shiftDate(last,{d:7});if(k==='1M')return shiftDate(last,{m:1});if(k==='1Y')return shiftDate(last,{m:12});if(k==='YTD')return (+last.slice(0,4)-1)+'-12-31'}
+function baseDate(last,k){if(k==='1H')return shiftDate(last,{d:7});if(k==='1M')return shiftDate(last,{m:1});if(k==='1Y')return shiftDate(last,{m:12});if(k==='3Y')return shiftDate(last,{m:36});if(k==='5Y')return shiftDate(last,{m:60});if(k==='YTD')return (+last.slice(0,4)-1)+'-12-31'}
 function returns(hist){if(!hist||hist.length<2)return {};const last=hist.at(-1),at=makeLookup(hist),r={};
   r['1D']=(last[1]/hist.at(-2)[1]-1)*100;
   for(const k of ['1M','YTD','1Y']){const b=at(baseDate(last[0],k));r[k]=b?(last[1]/b-1)*100:null}return r;}
@@ -883,14 +887,17 @@ function renderMacro(){const D=state.data,M=(D.macro&&D.macro.items)||[];
   const dd=m=>m.unit==='TL'?2:1;   // FX moves are small: daily change with 2 decimals
   const latest=M.reduce((a,m)=>m.history.at(-1)[0]>a?m.history.at(-1)[0]:a,'0');
   const asof=m=>{const d=m.history.at(-1)[0];return d<latest?` <span class="asof">(son işlem ${fmtDateTR(d)})</span>`:''};
-  const R=Object.fromEntries(M.map(m=>[m.k,returns(m.history)]));
-  $('mxKpis').innerHTML=M.map(m=>{const r=R[m.k];return `<div class="card kpi"><div class="lab">${m.name}${m.unit!=='TL'?` · <span class="asof">${m.unit}</span>`:''}</div>
+  const rx=h=>{const r=returns(h),at=makeLookup(h),last=h.at(-1);for(const k of ['3Y','5Y']){const b=at(baseDate(last[0],k));r[k]=b?(last[1]/b-1)*100:null}return r};
+  const R=Object.fromEntries(M.map(m=>[m.k,rx(m.history)]));
+  const pick=k=>{state.mxSel=k;render();$('mxPriceCard').scrollIntoView({behavior:'smooth',block:'start'})};
+  $('mxKpis').innerHTML=M.map(m=>{const r=R[m.k];return `<div class="card kpi pick ${m.k===state.mxSel?'on':''}" data-k="${m.k}" role="button" tabindex="0" aria-pressed="${m.k===state.mxSel}" title="Grafikte göster"><div class="lab">${m.name}${m.unit!=='TL'?` · <span class="asof">${m.unit}</span>`:''}</div>
     <div class="val num">${mxFmt(m,m.last)}<small>${m.unit==='TL'?'TL':'$'}</small></div>
     <div class="foot num"><span class="${cls(r['1D'])}">${pct(r['1D'],dd(m))}</span> bugün · <span class="${cls(r['YTD'])}">${pct(r['YTD'])}</span> YB</div></div>`}).join('');
+  $('mxKpis').querySelectorAll('.kpi').forEach(el=>{el.onclick=()=>pick(el.dataset.k);el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pick(el.dataset.k)}}});
   const cell=v=>`<td><div class="ret ${cls(v)}">${pct(v)}</div></td>`;
-  $('mxBody').innerHTML=M.map(m=>{const r=R[m.k];return `<tr data-k="${m.k}"><td><div class="cocell"><span class="logo" style="--s:28px;background:${mxColor(m.k)};color:#fff;font-size:10px" aria-hidden="true">${MXL[m.k].slice(0,3).toUpperCase()}</span><div><div class="co">${m.name}</div><div class="tk">${m.unit}</div></div></div></td>
-    <td>${mxFmt(m,m.last)}${asof(m)}</td><td><div class="ret ${cls(r['1D'])}">${pct(r['1D'],dd(m))}</div></td>${cell(r['1M'])}${cell(r['YTD'])}${cell(r['1Y'])}</tr>`}).join('');
-  $('mxBody').querySelectorAll('tr').forEach(tr=>tr.onclick=()=>{state.mxSel=tr.dataset.k;render();$('mxPriceCard').scrollIntoView({behavior:'smooth',block:'start'})});
+  $('mxBody').innerHTML=M.map(m=>{const r=R[m.k];return `<tr data-k="${m.k}" class="${m.k===state.mxSel?'on':''}"><td><div class="cocell"><span class="logo" style="--s:28px;background:${mxColor(m.k)};color:#fff;font-size:10px" aria-hidden="true">${MXL[m.k].slice(0,3).toUpperCase()}</span><div><div class="co">${m.name}</div><div class="tk">${m.unit}</div></div></div></td>
+    <td>${mxFmt(m,m.last)}${asof(m)}</td><td><div class="ret ${cls(r['1D'])}">${pct(r['1D'],dd(m))}</div></td>${cell(r['1M'])}${cell(r['YTD'])}${cell(r['1Y'])}${cell(r['3Y'])}${cell(r['5Y'])}</tr>`}).join('');
+  $('mxBody').querySelectorAll('tr').forEach(tr=>tr.onclick=()=>pick(tr.dataset.k));
   // price chart: one indicator at a time
   const sel=M.find(m=>m.k===state.mxSel)||M[0];state.mxSel=sel.k;
   $('mxPicker').innerHTML=M.map(m=>`<button data-k="${m.k}" aria-pressed="${m.k===sel.k}"><i style="background:${mxColor(m.k)}"></i>${m.name}</button>`).join('');
@@ -913,15 +920,15 @@ function renderMacro(){const D=state.data,M=(D.macro&&D.macro.items)||[];
   $('mxIxHint').textContent='Dönem başı = 100 · tümü USD bazında · TL çizgisi 1 TL\'nin dolar değeridir (düşüş = TL\'nin dolara karşı değer kaybı) · çizgileri açıp kapatmak için tıklayın';
   if(vis.length)lineChart($('mxIxChart'),vis,{height:300,fmt:v=>nf(0).format(v),tipFmt:v=>`${nf(1).format(v)} (${pct(v-100)})`,endLabels:true});
   else $('mxIxChart').innerHTML='<div class="chart-empty">Tüm çizgiler gizli. Göstermek için yukarıdaki kutucuklardan en az birine tıklayın.</div>';
-  const KK=['1D','1M','YTD','1Y'];
-  $('mxIxBody').innerHTML=vis.map(s=>{const m=M.find(x=>x.k===s.key),r=returns(usdH(m));
+  const KK=['1D','1M','YTD','1Y','3Y','5Y'];
+  $('mxIxBody').innerHTML=vis.map(s=>{const m=M.find(x=>x.k===s.key),r=rx(usdH(m));
     return `<tr><td><span style="display:inline-flex;align-items:center;gap:8px"><i style="width:12px;height:3px;border-radius:2px;background:${s.color};display:inline-block"></i>${s.name}</span></td>${KK.map(k=>`<td class="${cls(r[k])}">${pct(r[k],k==='1D'&&m.unit==='TL'?2:1)}</td>`).join('')}</tr>`}).join('');
 }
 function renderMacroNote(){const el=$('macroNote'),show=state.page==='makro';el.hidden=!show;
   document.querySelectorAll('#notesBody .nt-stock').forEach(p=>p.hidden=show);if(!show)return;
   const M=(state.data.macro&&state.data.macro.items)||[];
   el.innerHTML=`<p><b>Makro göstergeler · kaynaklar:</b> ${M.map(m=>`${m.name}: ${m.src}`).join(' · ')}.</p>
-  <p><b>Yöntem:</b> Getiriler günlük kapanışlardan hesaplanır (1 Ay: bir ay önceki aynı günün kapanışı, YB: geçen yılın son kapanışı). Emtialar en yakın vadeli kontrattır; vade geçişlerinde fiyatta küçük sıçramalar görülebilir. Yurt dışı piyasalar Borsa İstanbul kapandıktan sonra da işlem gördüğü için gün içinde "bugün" değişimi o anki fiyata göredir. USD bazında karşılaştırmada her gösterge dolar cinsinden değerine çevrilir: TL için 1 TL'nin dolar değeri (1 / USD/TRY), euro ve sterlin için EUR/USD ve GBP/USD, emtialar zaten dolar cinsindendir. Veriler yaklaşık 15 dakika gecikmelidir; hafta içi 10:20–18:50 arasında yarım saatte bir güncellenir.</p>`;}
+  <p><b>Yöntem:</b> Getiriler günlük kapanışlardan hesaplanır (1 Ay: bir ay önceki aynı günün kapanışı, YB: geçen yılın son kapanışı, 1/3/5 Yıl: o kadar yıl önceki aynı günün kapanışı; makro serileri 5 yıl geriye gider). Emtialar en yakın vadeli kontrattır; vade geçişlerinde fiyatta küçük sıçramalar görülebilir. Yurt dışı piyasalar Borsa İstanbul kapandıktan sonra da işlem gördüğü için gün içinde "bugün" değişimi o anki fiyata göredir. USD bazında karşılaştırmada her gösterge dolar cinsinden değerine çevrilir: TL için 1 TL'nin dolar değeri (1 / USD/TRY), euro ve sterlin için EUR/USD ve GBP/USD, emtialar zaten dolar cinsindendir. Veriler yaklaşık 15 dakika gecikmelidir; hafta içi 10:20–18:50 arasında yarım saatte bir güncellenir.</p>`;}
 
 /* ---------- SVG line chart ---------- */
 function lineChart(el,series,o){
@@ -938,6 +945,8 @@ function lineChart(el,series,o){
   if(o.intra){for(const k of keys){const d=k.slice(0,10);if(d!==prev){labs.push([k,`${DAYS[new Date(d+'T12:00:00Z').getUTCDay()]} ${+d.slice(8,10)}`]);prev=d}}}
   else{const span=(t1-t0)/864e5;
     if(span<=45){for(const k of keys){const wk=Math.floor(Date.parse(k)/6048e5);if(wk!==prev){labs.push([k,`${+k.slice(8,10)} ${MN[+k.slice(5,7)-1]}`]);prev=wk}}}
+    else if(span>540){for(const k of keys){const q=k.slice(0,4)+(k.slice(5,7)<'07'?'a':'b');if(q!==prev){labs.push([k,q.endsWith('a')?k.slice(0,4):'Tem']);prev=q}}   // multi-year: year at January, "Tem" mid-year
+      if(labs.length>Math.floor((W-m.l)/64)){const y=labs.filter(l=>l[1]!=='Tem');labs.length=0;labs.push(...y)}}   // narrow chart: years only
     else for(const k of keys){const mo=k.slice(0,7);if(mo!==prev){labs.push([k,MN[+k.slice(5,7)-1]+(k.slice(5,7)==='01'?" '"+k.slice(2,4):'')]);prev=mo}}}
   const step=Math.ceil(labs.length/Math.max(2,Math.floor((W-m.l)/64)));
   labs.forEach(([k,l],i)=>{if(i%step)return;const x=X(k);if(x<m.l+14&&i===0&&labs.length>2&&!o.intra)return;s+=`<text x="${Math.min(x,W-m.r-10)}" y="${H-6}" font-size="11" text-anchor="middle" fill="${css('--muted')}">${l}</text>`});
@@ -1051,8 +1060,8 @@ fetch('data.json?t='+Date.now()).then(r=>r.json()).then(D=>{
   seg('rangeGC','rangeGC',[['1M','1A'],['YTD','YB'],['1Y','1Y']]);
   seg('rangeGL','rangeGL',[['1M','1A'],['YTD','YB'],['1Y','1Y']]);
   seg('rangeNV','rangeNV',[['1M','1A'],['YTD','YB'],['1Y','1Y']]);
-  seg('rangeMP','rangeMP',[['1M','1A'],['YTD','YB'],['1Y','1Y']]);
-  seg('rangeMI','rangeMI',[['1M','1A'],['YTD','YB'],['1Y','1Y']]);
+  seg('rangeMP','rangeMP',[['1M','1A'],['YTD','YB'],['1Y','1Y'],['3Y','3Y'],['5Y','5Y']]);
+  seg('rangeMI','rangeMI',[['1M','1A'],['YTD','YB'],['1Y','1Y'],['3Y','3Y'],['5Y','5Y']]);
   seg('heatMode','heatMode',[['pazar','Pazara göre'],['sektor','Sektöre göre']]);
   renderMeta();
   route();
