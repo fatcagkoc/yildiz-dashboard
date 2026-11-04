@@ -495,7 +495,7 @@ tr.me .dbar i{opacity:1}
 </main>
 
 <script>
-const state={page:'grup',cur:'TRY',sel:'ULKER',rangeG:'1Y',rangeP:'1Y',rangeC:'1Y',rangeGC:'1Y',rangeGL:'1Y',rangeNV:'1Y',rangeMP:'1Y',rangeMI:'1Y',mxSel:'USDTRY',mxhidden:new Set(),heatMode:'pazar',data:null,hidden:new Set(),visFor:null,ghidden:new Set(),glhidden:null,nvhidden:null};
+const state={page:'grup',cur:'TRY',sel:'ULKER',rangeG:'1Y',rangeP:'1M',rangeC:'1M',rangeGC:'1Y',rangeGL:'1M',rangeNV:'1M',rangeMP:'1Y',rangeMI:'1Y',mxSel:'USDTRY',mxhidden:new Set(),heatMode:'pazar',data:null,hidden:new Set(),visFor:null,ghidden:new Set(),glhidden:null,nvhidden:null};
 const nf=(d)=>new Intl.NumberFormat('tr-TR',{minimumFractionDigits:d,maximumFractionDigits:d});
 const css=(v)=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const $=(id)=>document.getElementById(id);
@@ -1009,8 +1009,15 @@ document.addEventListener('pointerout',e=>{const t=e.target.closest('.hint-term'
 document.addEventListener('click',e=>{const t=e.target.closest('.hint-term');if(t){e.stopPropagation();termEl?hideTerm():showTerm(t)}else if(termEl&&!termEl.contains(e.target))hideTerm()},true);
 addEventListener('scroll',hideTerm,{passive:true});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.info.open').forEach(i=>i.classList.remove('open'))});
+// company page charts open on 1 month whenever the company page is entered from another page (or a direct link);
+// switching between companies on the company page keeps the period the user picked
+const CO_RANGES=['rangeP','rangeC','rangeNV','rangeGL'];
+function syncSeg(key){const el=$(key);if(el)el.querySelectorAll('button[data-k]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===state[key]))}
 function route(){const h=decodeURIComponent(location.hash.slice(1));const [p,t]=h.split('/');
+  const prevPage=state.page;
   state.page=p==='sirket'?'sirket':p==='makro'?'makro':'grup';
+  if(state.page==='sirket'&&(prevPage!=='sirket'||!state.routed)){CO_RANGES.forEach(k=>{state[k]='1M';syncSeg(k)})}
+  state.routed=true;
   if(t&&state.data&&co(t.toUpperCase()))state.sel=t.toUpperCase();
   document.querySelectorAll('.tabs a').forEach(a=>a.dataset.page===state.page?a.setAttribute('aria-current','page'):a.removeAttribute('aria-current'));
   $('page-grup').hidden=state.page!=='grup';$('page-sirket').hidden=state.page!=='sirket';$('page-makro').hidden=state.page!=='makro';
