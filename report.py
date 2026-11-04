@@ -366,7 +366,8 @@ def render(R, now, final, logo_src, final_note):
 <td valign="middle" style="padding-right:10px"><img src="{logo_src}" width="32" height="32" alt="Yıldız" style="display:block;border:0"></td>
 <td valign="middle"><div style="font-size:11px;letter-spacing:.12em;color:{MUTED};font-weight:600">YILDIZ HOLDİNG</div>
 <div style="font-size:20px;font-weight:700;line-height:1.25">{"Gün Sonu Değerlendirme" if final else "Gün içi durum"}</div>
-<div style="font-size:13px;color:{MUTED};margin-top:1px">{day} · Hisse Performans Dashboard</div></td></tr></table>
+<div style="font-size:13px;color:{MUTED};margin-top:1px">{day} · Hisse Performans Dashboard</div>
+<div style="font-size:11.5px;font-style:italic;color:{MUTED};margin-top:2px">Kurumsal Strateji ve İş Geliştirme</div></td></tr></table>
 {status}
 <div style="height:14px"></div>{stale}
 <table width="100%" cellspacing="0" cellpadding="0" role="presentation"><tr>{tiles}</tr></table>
