@@ -55,7 +55,12 @@ def fetch_history(symbol, bars=400, timeout=30, resolution="1D"):
         ws.send(_frame("resolve_symbol", [cs, "sym_1", "=" + json.dumps({"symbol": symbol, "adjustment": "splits"})]))
         ws.send(_frame("create_series", [cs, "s1", "s1", "sym_1", resolution, bars, ""]))
         out = []
+        # Hard deadline: TradingView keeps sending heartbeats even when a series never completes,
+        # so a per-read timeout alone can loop forever (5.11.2026: the run hung for 6 hours, no e-mail).
+        deadline = time.time() + max(45, timeout * 2)
         while True:
+            if time.time() > deadline:
+                raise TimeoutError(f"{symbol}: no complete series within {max(45, timeout * 2)} s")
             raw = ws.recv()
             for part in _split(raw):
                 if part.startswith("~h~"):
