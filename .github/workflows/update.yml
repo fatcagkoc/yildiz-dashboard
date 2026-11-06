@@ -23,6 +23,8 @@ permissions:
 jobs:
   update:
     runs-on: ubuntu-latest
+    # a normal run takes 1-2 minutes; never let a stuck run block the queue for hours (GitHub's default is 6 h)
+    timeout-minutes: 20
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
@@ -42,6 +44,7 @@ jobs:
 
       - name: Verileri cek
         continue-on-error: true
+        timeout-minutes: 8
         run: python fetch_data.py
 
       # Second guard against a double e-mail: read the latest "sent today" record right before the report step.
