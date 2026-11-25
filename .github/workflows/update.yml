@@ -87,5 +87,17 @@ jobs:
         with:
           path: .
 
+      # GitHub's Pages service sometimes can't find the artifact that was just uploaded
+      # ("No artifacts named github-pages were found", 24.11.2026). Wait a bit and try once more;
+      # only if the second attempt also fails does the run count as failed (and GitHub e-mails you).
       - id: deploy
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+
+      - name: Yayinlama icin bekle
+        if: steps.deploy.outcome == 'failure'
+        run: sleep 60
+
+      - id: deploy_retry
+        if: steps.deploy.outcome == 'failure'
         uses: actions/deploy-pages@v4
